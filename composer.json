@@ -1,5 +1,5 @@
 {
-    "name": "GitSmarttech/laravel-admin",
+    "name": "gitsmarttech/laravel-admin",
     "description": "smarttech dcat admin",
     "type": "library",
     "keywords": ["dcat", "laravel", "admin", "grid", "form", "laravel admin"],

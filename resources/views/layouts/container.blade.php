@@ -24,7 +24,7 @@
     <p class="clearfix blue-grey lighten-2 mb-0 text-center">
             <span class="text-center d-block d-md-inline-block mt-25">
                 Powered by
-                <a target="_blank" href="https://www.conceptfound.com/">創龍科技</a>
+                <a target="_blank" href="https://www.conceptfound.com/">ConceptFound</a>
             </span>
 
         <button class="btn btn-primary btn-icon scroll-top pull-right" style="position: fixed;bottom: 2%; right: 10px;display: none">

@@ -22,7 +22,7 @@ return [
     | `img` tag, eg '<img src="http://logo-url" alt="Admin logo">'.
     |
     */
-    'logo' => '<img src="/vendor/dcat-admin/images/logo.png" width="35"> &nbsp;Dcat Admin',
+    'logo' => '<img src="/vendor/dcat-admin/images/logo.png" style="max-width: none;max-height: none;width: 228px;" width="35"> &nbsp;',
 
     /*
     |--------------------------------------------------------------------------
@@ -344,7 +344,7 @@ return [
     |
     | Whether enable default breadcrumb for every page content.
     */
-    'enable_default_breadcrumb' => true,
+    'enable_default_breadcrumb' => false,
 
     /*
     |--------------------------------------------------------------------------

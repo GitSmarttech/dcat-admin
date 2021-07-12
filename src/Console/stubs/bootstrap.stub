@@ -24,3 +24,5 @@ use Dcat\Admin\Show;
  * Admin::js('/packages/prettydocs/js/main.js');
  *
  */
+
+Admin::css('/vendor/dcat-admin/adminlte/adminlte-ext.css');

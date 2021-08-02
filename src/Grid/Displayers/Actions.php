@@ -264,9 +264,9 @@ class Actions extends AbstractDisplayer
      */
     protected function getViewLabel()
     {
-        $label = trans('admin.show');
+        $label = trans('admin.hao.show');
 
-        return "<i title='{$label}' class=\"feather icon-eye grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather hao-view grid-action-icon\">$label</i> &nbsp;";
     }
 
     /**
@@ -287,9 +287,10 @@ class Actions extends AbstractDisplayer
      */
     protected function getEditLabel()
     {
-        $label = trans('admin.edit');
+        $label = trans('admin.hao.edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit-1 grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather hao-edit grid-action-icon\">$label</i> &nbsp;";
+
     }
 
     /**
@@ -331,8 +332,9 @@ class Actions extends AbstractDisplayer
      */
     protected function getDeleteLabel()
     {
-        $label = trans('admin.delete');
+        $label = trans('admin.hao.delete');
 
-        return "<i class=\"feather icon-trash grid-action-icon\" title='{$label}'></i> &nbsp;";
+        return "<i class=\"feather hao-delete grid-action-icon\" title='{$label}'>$label</i> &nbsp;";
+
     }
 }

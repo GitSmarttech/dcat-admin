@@ -124,7 +124,7 @@ class Builder
     /**
      * @var bool
      */
-    protected $showHeader = true;
+    protected $showHeader = false;
 
     /**
      * @var bool

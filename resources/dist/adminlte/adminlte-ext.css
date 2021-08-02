@@ -212,3 +212,13 @@ html,body{
         display: none;
     }
 }
+
+.btn-gray{
+    background-color: #B3B3B3;
+    border-color: #B3B3B3;
+}
+
+.btn-brown{
+    background-color: #9E7C69;
+    border-color: #9E7C69;
+}

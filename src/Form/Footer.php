@@ -33,14 +33,14 @@ class Footer implements Renderable
      *
      * @var array
      */
-    protected $buttons = ['reset' => true, 'submit' => true];
+    protected $buttons = ['reset' => false, 'submit' => true ,'cancel'=>true];
 
     /**
      * Available checkboxes.
      *
      * @var array
      */
-    protected $checkboxes = ['view' => true, 'continue_editing' => true, 'continue_creating' => true];
+    protected $checkboxes = ['view' => false, 'continue_editing' => false, 'continue_creating' => false];
 
     /**
      * Default checked.
@@ -83,6 +83,20 @@ class Footer implements Renderable
     public function disableSubmit(bool $disable = true)
     {
         $this->buttons['submit'] = ! $disable;
+
+        return $this;
+    }
+
+    /**
+     * Disable cancel button.
+     *
+     * @param bool $disable
+     *
+     * @return $this
+     */
+    public function disableCancel(bool $disable = true)
+    {
+        $this->buttons['cancel'] = ! $disable;
 
         return $this;
     }
@@ -172,6 +186,16 @@ class Footer implements Renderable
     }
 
     /**
+     * Get request path for resource list.
+     *
+     * @return string
+     */
+    protected function getListPath()
+    {
+        return $this->builder->resource();
+    }
+
+    /**
      * Build checkboxes.
      *
      * @return Checkbox|null
@@ -240,6 +264,7 @@ class Footer implements Renderable
             'buttons'    => $this->buttons,
             'checkboxes' => $this->buildCheckboxes(),
             'width'      => $this->builder->getWidth(),
+            'path'       => $this->getListPath(),
         ];
 
         $data = array_merge($data, $this->data);

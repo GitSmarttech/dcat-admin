@@ -59,3 +59,156 @@
 .navbar-nav .upload .icon-upload{
     margin-right: 4px;
 }
+
+/* 拓展CSS样式表开始 */
+.nav-sidebar .nav-link>.right, .nav-sidebar .nav-link>p>.right {
+    font-size: 14px !important;
+    top: 20px !important;
+}
+.nav-sidebar>.nav-item>.nav-link i {
+    font-size: 20px !important;
+}
+.sidebar-light-primary .nav-item > .nav-link.active{
+    color: #49403A !important;
+}
+.has-treeview p{
+    color: #ffffff;
+}
+.has-treeview>.nav-link i{
+    color: #ffffff;
+}
+.menu-open>.nav-link p,.menu-open>.nav-link i{
+    color: #EDD4CB !important;
+}
+.has-treeview .nav-link.active p{
+    color: #EDD4CB !important;
+}
+.main-sidebar .nav .nav-item .nav-link:hover p,.menu-open>.nav-link:hover i,.has-treeview>.nav-link:hover i{
+    color: #000000 !important;
+}
+.menu-open .has-treeview .nav-link:hover p{
+    color: #000000 !important;
+}
+
+
+/* 管理员页面 */
+.content-wrapper{
+    background: #F2F2F2;
+}
+html,body{
+    height: 100% !important;
+}
+.administrator-page .table-wrapper{
+    min-height: 70vh;
+    background: #ffffff !important;
+    overflow-x:auto !important;
+}
+.administrator-page table.data-table{
+    border-collapse:collapse !important;
+}
+.administrator-page table.data-table thead tr{
+    background: #ffffff;
+    border-bottom: 1px solid #EFEEED;
+}
+.administrator-page table.data-table thead tr th{
+    padding-top: 20px;
+    padding-bottom: 18px;
+    font-weight: 600;
+    font-family: PingFangSC-Semibold, PingFang SC;
+    color: #292422;
+    font-size: 18px !important;
+    text-align: center;
+}
+.administrator-page table.custom-data-table.data-table thead th:first-child{
+    padding-left: 26px;
+}
+.administrator-page table.custom-data-table.data-table tbody tr td:first-child{
+    padding-left: 26px;
+}
+.administrator-page table.custom-data-table.data-table tbody tr td:nth-child(2) span{
+    color: #29B024 !important;
+}
+.administrator-page table.custom-data-table.data-table tbody tr td{
+    color: #443F3D;
+    font-size: 14px;
+    border: none;
+    text-align: center;
+}
+.administrator-page .vs-checkbox-con .vs-checkbox{
+    border: 1px solid #E0E0E0;
+    width: 23px;
+    height: 23px;
+}
+.grid__actions__{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 60px !important;
+    height: auto !important;
+}
+.grid__actions__>a{
+    min-width: 42px;
+    vertical-align: middle;
+}
+.grid__actions__>a i{
+    padding: 6px 6px;
+    border-radius: 3px;
+}
+.grid__actions__>a:nth-of-type(1) i{
+    background-color: #EDD4CB;
+    color: #ffffff;
+}.grid__actions__>a:nth-of-type(2) i{
+     background-color: #9E7C69;
+     color: #ffffff;
+ }.grid__actions__>a:nth-of-type(3) i{
+      background-color: red;
+      color: #ffffff;
+  }
+#layui-layer1 .layui-layer-title{
+    background-color: #49403A !important;
+    color: #ffffff;
+    font-size: 18px !important;
+    font-weight: 600;
+    font-family: PingFangSC-Semibold, PingFang SC;
+}
+#layui-layer1 .layui-layer-setwin a,#layui-layer1 .layui-layer-setwin a cite::before{
+    color: #ffffff;
+}
+#layui-layer1 .layui-layer-btn>a{
+    border: none;
+}
+#layui-layer1 .layui-layer-btn>a:nth-of-type(1){
+    background-color: #9E7C69 !important;
+}
+#layui-layer1 .layui-layer-btn>a:nth-of-type(2){
+    background-color: #B3B3B3;
+    color: #ffffff;
+}
+@media (min-width:576px){
+
+    .grid__actions__>a{
+        min-width: 40px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+}
+@media (min-width:1200px){
+    #layui-layer1{
+        width: 650px !important;
+        height: 540px !important;
+    }
+}
+@media (max-width: 992px) {
+
+    .main-sidebar,
+    .main-sidebar:before {
+        box-shadow: none !important;
+        margin-left: -260px;
+    }
+}
+
+@media (max-width:500px){
+    .administrator-page .table-wrapper::-webkit-scrollbar {
+        display: none;
+    }
+}

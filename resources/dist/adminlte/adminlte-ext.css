@@ -125,9 +125,6 @@ html,body{
 .administrator-page table.custom-data-table.data-table tbody tr td:first-child{
     padding-left: 26px;
 }
-.administrator-page table.custom-data-table.data-table tbody tr td:nth-child(2) span{
-    color: #29B024 !important;
-}
 .administrator-page table.custom-data-table.data-table tbody tr td{
     color: #443F3D;
     font-size: 14px;

@@ -309,9 +309,10 @@ class Actions extends AbstractDisplayer
      */
     protected function getQuickEditLabel()
     {
-        $label = trans('admin.quick_edit');
+//        $label = trans('admin.quick_edit');
+        $label = trans('admin.hao.edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather grid-action-icon\">$label</i> &nbsp;";
     }
 
     /**

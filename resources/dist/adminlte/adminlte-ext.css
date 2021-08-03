@@ -219,3 +219,14 @@ html,body{
     background-color: #9E7C69;
     border-color: #9E7C69;
 }
+
+.vs-checkbox-con input:checked~.vs-checkbox{
+    border: none;
+}
+.vs-checkbox-con input:checked~.vs-checkbox .vs-checkbox--check{
+    border-color: #9E7C69 !important;
+    background-color: #9E7C69 !important;
+}
+.vs-checkbox-con input:checked~.vs-checkbox .vs-checkbox--check .vs-icon{
+    margin-top: 2px !important;
+}

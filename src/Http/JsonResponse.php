@@ -202,6 +202,15 @@ class JsonResponse implements Arrayable
     }
 
     /**
+     * 填寫url跳轉
+     *
+     * @return $this
+     */
+    public function redirectToUrl(?string $url){
+        return $this->then(['action' => 'redirect', 'value' => $url]);
+    }
+
+    /**
      * @param string|null $url
      *
      * @return $this

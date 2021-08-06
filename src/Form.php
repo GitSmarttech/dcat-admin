@@ -69,6 +69,8 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\Captcha                captcha()
  * @method Field\Listbox                listbox($column, $label = '')
  * @method Field\File                   file($column, $label = '')
+ * @method Field\OBSFile                OBSFile($column, $label = '')
+ * @method Field\OBSMultipleFile        OBSMultipleFile($column, $label = '')
  * @method Field\Image                  image($column, $label = '')
  * @method Field\MultipleFile           multipleFile($column, $label = '')
  * @method Field\MultipleImage          multipleImage($column, $label = '')
@@ -152,6 +154,8 @@ class Form implements Renderable
         'captcha'             => Field\Captcha::class,
         'listbox'             => Field\Listbox::class,
         'file'                => Field\File::class,
+        'OBSFile'             => Field\OBSFile::class,
+        'OBSMultipleFile'     => Field\OBSMultipleFile::class,
         'image'               => Field\Image::class,
         'multipleFile'        => Field\MultipleFile::class,
         'multipleImage'       => Field\MultipleImage::class,

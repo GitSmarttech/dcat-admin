@@ -177,11 +177,13 @@ html,body{
     color: #ffffff;
 }
 @media (min-width:576px){
-
     .grid__actions__>a{
         min-width: 40px;
         display: inline-block;
-        margin-bottom: 10px;
+        min-height: 30px;
+    }
+    .grid__actions__>a i{
+        line-height: 30px;
     }
 }
 @media (min-width:1200px){

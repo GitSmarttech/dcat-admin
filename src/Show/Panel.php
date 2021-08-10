@@ -19,6 +19,16 @@ class Panel implements Renderable
     protected $view = 'admin::show.panel';
 
     /**
+     * Width for label and field.
+     *
+     * @var array
+     */
+    protected $width = [
+        'label' => 2,
+        'field' => 8,
+    ];
+
+    /**
      * The fields that this panel holds.
      *
      * @var Collection
@@ -55,6 +65,7 @@ class Panel implements Renderable
         $this->variables = [
             'fields' => new Collection(),
             'tools'  => new Tools($this),
+            'footer'  => new Footer($this),
             'rows'   => $this->parent->rows(),
             'style'  => 'default',
             'title'  => trans('admin.detail'),
@@ -83,6 +94,16 @@ class Panel implements Renderable
     public function parent()
     {
         return $this->parent;
+    }
+
+    /**
+     * Get label and field width.
+     *
+     * @return array
+     */
+    public function getWidth()
+    {
+        return $this->width;
     }
 
     /**
@@ -174,6 +195,22 @@ class Panel implements Renderable
         }
 
         call_user_func($callable, $this->variables['tools']);
+    }
+
+    /**
+     * Build panel footer.
+     *
+     * @param $callable
+     *
+     * @return Tools|null
+     */
+    public function footer($callable = null)
+    {
+        if ($callable === null) {
+            return $this->variables['footer'];
+        }
+
+        call_user_func($callable, $this->variables['footer']);
     }
 
     /**

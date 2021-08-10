@@ -12,4 +12,10 @@
             </div>
         </div>
     @endif
+
+    @if(isset($footer))
+        {!! $footer !!}
+    @endif
+
 </div>
+

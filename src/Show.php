@@ -28,8 +28,8 @@ class Show implements Renderable
 {
     use HasBuilderEvents;
     use Macroable {
-            __call as macroCall;
-        }
+        __call as macroCall;
+    }
 
     /**
      * @var string
@@ -92,6 +92,14 @@ class Show implements Renderable
      * @var \Illuminate\Support\Collection
      */
     protected $rows;
+
+    /**
+     * Show footer
+     *
+     * @var bool
+     */
+    protected $showFooter = false;
+
 
     /**
      * Show constructor.
@@ -243,6 +251,8 @@ class Show implements Renderable
         return $this;
     }
 
+
+
     /**
      * Add variables to show view.
      *
@@ -318,6 +328,33 @@ class Show implements Renderable
         foreach ($callback as $tool) {
             $this->panel->tools()->append($tool);
         }
+
+        return $this;
+    }
+
+    /**
+     * Footer setting for show.
+     *
+     * @param Closure $callback
+     *
+     * @return $this
+     */
+    public function footer(Closure $callback)
+    {
+
+        call_user_func($callback, $this->panel->footer());
+
+        return $this;
+    }
+
+    /**
+     * Show footer.
+     *
+     * @return $this
+     */
+    public function showFooter(bool $disable = true)
+    {
+        $this->showFooter = $disable;
 
         return $this;
     }
@@ -689,7 +726,12 @@ class Show implements Renderable
         $data = [
             'panel'     => $this->panel->fill($this->fields),
             'relations' => $this->relations,
+//            'footer'    => $this->panel->footer(),
         ];
+
+        if ($this->showFooter) {
+            $data['footer']=$this->panel->footer();
+        }
 
         return view($this->view, $data)->render();
     }

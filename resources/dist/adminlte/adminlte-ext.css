@@ -247,9 +247,9 @@ html,body{
 }
 
 /* 侧边栏 */
-  .layout-fixed .main-sidebar{
+.layout-fixed .main-sidebar{
     overflow-y: scroll;
 }
-  .layout-fixed .main-sidebar::-webkit-scrollbar {
+.layout-fixed .main-sidebar::-webkit-scrollbar{
     display: none;
 }

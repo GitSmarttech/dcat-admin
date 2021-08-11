@@ -1,4 +1,4 @@
-<div class="box-footer">
+<div class="box-footer show-footer">
 
     <div class="col-md-{{$width['label']}} d-md-block" style="display: none"></div>
 

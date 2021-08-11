@@ -234,16 +234,14 @@ html,body{
 }
 
 /* footer */
-.box-footer{
+.show-footer{
     padding: 0 0 20px;
     background: #ffffff;
     margin:0 14px;
     width: 100%;
 
 }
-.box-footer>div{
-    /* padding: 0; */
-}
+
 .card {
     box-shadow:none;
 }

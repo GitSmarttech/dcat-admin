@@ -247,3 +247,11 @@ html,body{
 .card {
     box-shadow:none;
 }
+
+/* 侧边栏 */
+  .layout-fixed .main-sidebar{
+    overflow-y: scroll;
+}
+  .layout-fixed .main-sidebar::-webkit-scrollbar {
+    display: none;
+}

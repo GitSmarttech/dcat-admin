@@ -141,9 +141,9 @@
         @include('admin::form.error')
         <div class="obs-file">
             <input type="file" multiple class="obs-file-input" id="{{$class}}">
-            <label class="obs-file-label" for="{{$class}}">选择文件</label>
+            <label class="obs-file-label" for="{{$class}}">選擇文件</label>
             <ul class="file-list"></ul>
-            <label class="btn btn-primary continue-upload" for="{{$class}}">继续上传</label>
+            <label class="btn btn-primary continue-upload" for="{{$class}}">繼續上傳</label>
             <div class="obs-file-hidden-input"></div>
         </div>
         <div class="progress obs-progress">

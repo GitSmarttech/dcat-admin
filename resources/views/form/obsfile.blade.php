@@ -137,7 +137,7 @@
         @include('admin::form.error')
         <div class="obs-file">
             <input type="file" class="obs-file-input" id="{{$class}}">
-            <label class="obs-file-label" for="{{$class}}">选择文件</label>
+            <label class="obs-file-label" for="{{$class}}">選擇文件</label>
             <ul class="file-list"></ul>
             <div class="obs-file-hidden-input"></div>
         </div>

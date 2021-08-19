@@ -6,7 +6,7 @@
 
         @if(! empty($buttons['submit']))
             <div class="btn-group pull-right">
-                <button class="btn btn-primary submit"><i class="feather icon-save"></i> {{ trans('admin.submit') }}</button>
+                <button class="btn btn-primary submit"><i class="feather icon-navigation"></i> 送出</button>
             </div>
 
             @if($checkboxes)
@@ -16,9 +16,9 @@
         @endif
 
         @if(! empty($buttons['reset']))
-        <div class="btn-group pull-left">
-            <button type="reset" class="btn btn-white"><i class="feather icon-rotate-ccw"></i> {{ trans('admin.reset') }}</button>
-        </div>
+            <div class="btn-group pull-left">
+                <button type="reset" class="btn btn-white"><i class="feather icon-rotate-ccw"></i> {{ trans('admin.reset') }}</button>
+            </div>
         @endif
     </div>
 </div>

@@ -333,6 +333,6 @@ class Actions extends AbstractDisplayer
     {
         $label = trans('admin.delete');
 
-        return "<i class=\"feather icon-trash grid-action-icon\" title='{$label}'></i> &nbsp;";
+        return "<i class=\"feather icon-trash-2 grid-action-icon\" title='{$label}'></i> &nbsp;";
     }
 }

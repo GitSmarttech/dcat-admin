@@ -15,8 +15,8 @@ export default class Menu {
         new PerfectScrollbar('.main-sidebar .sidebar');
 
         let $content = $('.main-menu-content'),
-            $items = $content.find('li'),
-            $hasSubItems = $content.find('li.has-treeview');
+          $items = $content.find('li'),
+          $hasSubItems = $content.find('li.has-treeview');
 
         $items.find('a').click(function () {
             let href = $(this).attr('href');
@@ -25,9 +25,12 @@ export default class Menu {
             }
 
             $items.find('.nav-link').removeClass('active');
+            $items.removeClass('active')
             // $hasSubItems.removeClass('menu-open');
 
             $(this).addClass('active')
+            // 增加active
+            $(this).parent().addClass('active')
         });
     }
 
@@ -38,9 +41,9 @@ export default class Menu {
         };
 
         $(selectors.item).on('mouseover', function () {
-            $(this).addClass('open')
+            $(this).addClass('open');
         }).on('mouseout', function () {
-            $(this).removeClass('open')
+            $(this).removeClass('open');
         });
 
         $(selectors.link).on('click', function () {
@@ -56,8 +59,8 @@ export default class Menu {
 
         // 自动计算高度
         let $horizontalMenu = $('.horizontal-menu .main-horizontal-sidebar'),
-            defaultHorizontalMenuHeight = 0,
-            horizontalMenuTop = 0;
+          defaultHorizontalMenuHeight = 0,
+          horizontalMenuTop = 0;
 
         // 重新计算高度
         let resize = function () {
@@ -74,8 +77,8 @@ export default class Menu {
             }
 
             let height = $horizontalMenu.height(),
-                diff = height - defaultHorizontalMenuHeight,
-                $wrapper = $('.horizontal-menu.navbar-fixed-top .content-wrapper');
+              diff = height - defaultHorizontalMenuHeight,
+              $wrapper = $('.horizontal-menu.navbar-fixed-top .content-wrapper');
 
             if (height <= defaultHorizontalMenuHeight) {
                 return $wrapper.css({'padding-top': horizontalMenuTop + 'px'});

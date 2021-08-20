@@ -58,6 +58,7 @@ class Panel implements Renderable
             'rows'   => $this->parent->rows(),
             'style'  => 'default',
             'title'  => trans('admin.detail'),
+            'edit_url'=>$this->parent()->resource() . '/' . $this->parent()->getKey() . '/edit'
         ];
     }
 

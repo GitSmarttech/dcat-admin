@@ -1,9 +1,3 @@
-@if($title || $tools)
-<div class="box-header with-border" style="padding: .65rem 1rem">
-    <h3 class="box-title" style="line-height:30px;">{!! $title !!}</h3>
-    <div class="pull-right">{!! $tools !!}</div>
-</div>
-@endif
 <div class="box-body">
     <div class="form-horizontal mt-1">
         @if($rows->isEmpty())
@@ -18,5 +12,13 @@
             </div>
         @endif
         <div class="clearfix"></div>
+    </div>
+    <div class="pull-right">
+        <div class="view-edit-btn btn-group pull-right btn-mini" style="margin-right: 5px">
+            <a href="{{$edit_url}}" class="btn btn-sm btn-primary">
+                <i class="feather icon-edit-1"></i>
+                <span class="d-none d-sm-inline">編輯</span>
+            </a>
+        </div>
     </div>
 </div>

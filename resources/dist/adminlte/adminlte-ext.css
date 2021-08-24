@@ -271,3 +271,40 @@ html,body{
 .layout-fixed .main-sidebar::-webkit-scrollbar{
     display: none;
 }
+/* 按钮 */
+.btn-primary.btn-outline{
+    color: #9E7C69;
+    border-color: #9E7C69;
+    line-height: 19px;
+}
+.pull-right .btn-primary.btn-outline,.btn-primary.disable-outline{
+    color: #ffffff;
+    border-color: #9E7C69;
+    background: #9E7C69;
+    font-size: 14px;
+    font-family: PingFangSC-Medium, PingFang SC;
+    font-weight: 500;
+    line-height: 19px;
+}
+.btn.btn-primary {
+    color: #ffffff;
+    border-color: #9E7C69;
+    background: #9E7C69;
+    font-size: 14px;
+    font-family: PingFangSC-Medium, PingFang SC;
+    font-weight: 500;
+    /* line-height: 19px; */
+}
+.btn-primary.submit{
+    color: #ffffff;
+    border-color: #9E7C69;
+    background: #9E7C69;
+    font-family: PingFangSC-Medium, PingFang SC;
+}
+.reset.btn .btn-white{
+    line-height: 14px;
+}
+.btn-primary.btn-outline:hover{
+    background-color: #ffffff;
+    color: #9E7C69;
+}

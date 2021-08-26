@@ -6,8 +6,6 @@
 
     <div class="{{$viewClass['field']}}">
 
-        @include('admin::form.error')
-
         <input type="hidden" name="{{$name}}"/>
 
         <select class="form-control {{$class}}" style="width: 100%;" name="{{$name}}" {!! $attributes !!} >
@@ -26,6 +24,7 @@
                 @endforeach
             @endif
         </select>
+        @include('admin::form.error')
 
         @include('admin::form.help-block')
 

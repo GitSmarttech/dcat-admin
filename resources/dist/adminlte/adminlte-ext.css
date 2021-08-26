@@ -308,3 +308,54 @@ html,body{
     background-color: #ffffff;
     color: #9E7C69;
 }
+.btn-primary:not(:disabled):not(.disabled):active{
+    color: #fff !important;
+    background-color: #9E7C69  !important;
+    border-color: #9E7C69  !important;
+}
+/*分頁*/
+.per-pages-selector{
+    display: none !important;
+}
+.box-footer.d-block.clearfix{
+    display: flex !important;
+    flex-direction: column-reverse;
+    justify-content: center;
+    padding-top: 15px;
+}
+.box-footer.d-block.clearfix>span{
+    text-align: center;
+    font-size: 14px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: #49403A !important;
+    line-height: 20px !important;
+    margin-top: 8px;
+}
+.box-footer.d-block.clearfix span{
+    text-align: center;
+}
+.box-footer.d-block.clearfix ul{
+    margin: 0 auto;
+    box-shadow:none !important;
+    text-align: center;
+}
+.pagination .page-item{
+    border-radius: 3px;
+    background: #49403A;
+}
+.pagination .page-item .page-link,.pagination .page-item .page-link:hover {
+    color: #FFFFFF;
+    background: #49403A;
+}
+.page-item{
+    margin-left: 6px;
+    margin-right: 6px;
+}
+.page-item .page-link{
+    border-radius: 3px;}
+.pagination .page-item.active .page-link {
+    background-color: #9E7C69;
+    border-radius: 3px;
+    min-width: 44px;
+}

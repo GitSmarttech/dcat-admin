@@ -236,10 +236,14 @@ class Footer implements Renderable
      */
     public function render()
     {
+        $is_editing = $this->builder->isEditing();
+        $view_url = $this->builder->resource() . '/' . $this->builder->getResourceId();
         $data = [
             'buttons'    => $this->buttons,
             'checkboxes' => $this->buildCheckboxes(),
             'width'      => $this->builder->getWidth(),
+            'is_editing' => $is_editing,
+            'view_url'   => $view_url,
         ];
 
         $data = array_merge($data, $this->data);

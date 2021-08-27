@@ -8,7 +8,11 @@
             <div class="btn-group pull-right">
                 <button class="btn btn-primary submit"><i class="feather icon-navigation"></i> 送出</button>
             </div>
-
+            @if($is_editing)
+                <div class="btn-group pull-right">
+                    <a href="{{$view_url}}" class="btn btn-outline-primary view"><i class="feather icon-eye"></i> 查看</a>
+                </div>
+            @endif
             @if($checkboxes)
                 <div class="pull-right d-md-flex" style="margin:10px 15px 0 0;display: none">{!! $checkboxes !!}</div>
             @endif

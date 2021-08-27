@@ -12,7 +12,8 @@ export default class Pjax {
             scriptContainer = 'script[data-exec-on-popstate]';
 
         $.pjax.defaults.timeout = 5000;
-        $.pjax.defaults.maxCacheLength = 0;
+        $.pjax.defaults.maxCacheLength = 20;
+        $.pjax.defaults.push = true;
 
         $('a:not(a[target="_blank"])').click(function (event) {
             $.pjax.click(event, container, { fragment: 'body' });

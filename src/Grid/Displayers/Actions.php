@@ -266,7 +266,7 @@ class Actions extends AbstractDisplayer
     {
         $label = trans('admin.show');
 
-        return "<i title='{$label}' class=\"feather icon-eye grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather icon-eye grid-action-icon\"></i>";
     }
 
     /**
@@ -289,7 +289,7 @@ class Actions extends AbstractDisplayer
     {
         $label = trans('admin.edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit-1 grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather icon-edit-1 grid-action-icon\"></i>";
     }
 
     /**
@@ -310,7 +310,7 @@ class Actions extends AbstractDisplayer
     {
         $label = trans('admin.quick_edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit grid-action-icon\"></i> &nbsp;";
+        return "<i title='{$label}' class=\"feather icon-edit grid-action-icon\"></i>";
     }
 
     /**
@@ -333,6 +333,6 @@ class Actions extends AbstractDisplayer
     {
         $label = trans('admin.delete');
 
-        return "<i class=\"feather icon-trash-2 grid-action-icon\" title='{$label}'></i> &nbsp;";
+        return "<i class=\"feather icon-trash-2 grid-action-icon\" title='{$label}'></i>";
     }
 }

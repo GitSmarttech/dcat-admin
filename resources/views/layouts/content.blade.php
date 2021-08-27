@@ -1,8 +1,8 @@
 @section('content-header')
     <section class="content-header breadcrumbs-top">
-        @if($header || $description)
+        @if($page_title || $description)
             <h1 class=" float-left">
-                <span class="text-capitalize">{!! $header !!}</span>
+                <span class="text-capitalize">{!! $page_title !!}</span>
                 <small>{!! $description !!}</small>
             </h1>
         @elseif($breadcrumb || config('admin.enable_default_breadcrumb'))

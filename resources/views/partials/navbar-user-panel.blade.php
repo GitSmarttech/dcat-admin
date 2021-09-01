@@ -5,10 +5,10 @@
             {{--            <span class="user-name text-bold-600">{{ $user->name }}</span>--}}
             {{--            <span class="user-status"><i class="fa fa-circle text-success"></i> {{ trans('admin.online') }}</span>--}}
             {{--        </div>--}}
-            <div class="upload">
-                <i class="feather icon-upload"></i>
-                Upload
-            </div>
+{{--            <div class="upload">--}}
+{{--                <i class="feather icon-upload"></i>--}}
+{{--                Upload--}}
+{{--            </div>--}}
             <span>
             <img class="round" src="{{ $user->getAvatar() }}" alt="avatar" height="40" width="40" />
         </span>

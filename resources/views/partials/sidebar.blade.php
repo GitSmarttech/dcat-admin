@@ -13,8 +13,8 @@
                         </li>
                         <li class="nav-item mr-auto">
                             <div class="avatar-info">
-                                <div class="avatar-top"><img src="{{ $user->getAvatar() }}" alt=""></div>
-                                <div class="avatar-name">{{ $user->name }}</div>
+                                <div class="avatar-top"><img src="{{ \Dcat\Admin\Admin::user()->getAvatar() }}" alt=""></div>
+                                <div class="avatar-name">{{ \Dcat\Admin\Admin::user()->name }}</div>
                             </div>
                         </li>
                     </ul>

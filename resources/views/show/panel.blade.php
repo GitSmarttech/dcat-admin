@@ -17,7 +17,7 @@
         <div class="view-edit-btn btn-group pull-right btn-mini" style="margin-right: 5px">
             <a href="{{$edit_url}}" class="btn btn-sm btn-primary">
                 <i class="feather icon-edit-1"></i>
-                <span class="d-none d-sm-inline">編輯</span>
+                <span class="d-none d-sm-inline">{{ trans('admin.edit') }}</span>
             </a>
         </div>
     </div>

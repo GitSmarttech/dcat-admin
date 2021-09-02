@@ -11,13 +11,13 @@
         </a>
         <div class="dropdown-menu dropdown-menu-right">
             <a href="{{ admin_url('auth/setting') }}" class="dropdown-item setting">
-                <img src="/static/admin/images/setting_icon.png" width="25" alt="">&nbsp;&nbsp;&nbsp; 設置
+                <img src="/static/admin/images/setting_icon.png" width="25" alt="">&nbsp;&nbsp;&nbsp; {{ trans('admin.setting') }}
             </a>
 
             <div class="dropdown-divider"></div>
 
             <a class="dropdown-item exit" href="{{ admin_url('auth/logout') }}">
-                <img src="/static/admin/images/exit_icon.png" width="20" alt="">&nbsp;&nbsp;&nbsp; 登出
+                <img src="/static/admin/images/exit_icon.png" width="20" alt="">&nbsp;&nbsp;&nbsp; {{ trans('admin.logout') }}
             </a>
         </div>
     </li>

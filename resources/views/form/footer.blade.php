@@ -6,11 +6,11 @@
 
         @if(! empty($buttons['submit']))
             <div class="btn-group pull-right">
-                <button class="btn btn-primary submit"><i class="feather icon-navigation"></i> 送出</button>
+                <button class="btn btn-primary submit"><i class="feather icon-navigation"></i> {{ trans('admin.submit') }}</button>
             </div>
             @if($is_editing)
                 <div class="btn-group pull-right">
-                    <a href="{{$view_url}}" class="btn btn-outline-primary view"><i class="feather icon-eye"></i> 查看</a>
+                    <a href="{{$view_url}}" class="btn btn-outline-primary view"><i class="feather icon-eye"></i> {{ trans('admin.view') }}</a>
                 </div>
             @endif
             @if($checkboxes)

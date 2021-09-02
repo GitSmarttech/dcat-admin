@@ -430,7 +430,7 @@ class Content implements Renderable
     {
         return array_merge([
             'header'          => $this->title,
-            'page_title'      => '<button btn btn-light id="global-back-btn" onclick="javascript :history.back(-1);"><i class="feather icon-arrow-left"></i>返回</button>'.$this->title,
+            'page_title'      => '<button btn btn-light id="global-back-btn" onclick="javascript :history.back(-1);"><i class="feather icon-arrow-left"></i>'.trans('admin.back').'</button>'.$this->title,
             'description'     => $this->description,
             'breadcrumb'      => $this->breadcrumb,
             'configData'      => $this->applyClasses(),

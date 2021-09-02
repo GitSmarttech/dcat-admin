@@ -87,6 +87,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\MultipleSelectTable    multipleSelectTable($column, $label = '')
  * @method Field\Button                 button(string $html = null)
  * @method Field\DisplayHao             displayHao($column, $label = '')
+ * @method Field\TextWithSelect         textWithSelect($column, $label = '')
  */
 class Form implements Renderable
 {
@@ -170,6 +171,7 @@ class Form implements Renderable
         'selectTable'         => Field\SelectTable::class,
         'multipleSelectTable' => Field\MultipleSelectTable::class,
         'displayHao'          => Field\DisplayHao::class,
+        'textWithSelect'      => Field\TextWithSelect::class,
     ];
 
     /**

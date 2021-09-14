@@ -482,3 +482,22 @@ ul {
     top: 50%;
     width: 0;
 }
+.radio_label_admin{
+    border-radius: 2px;
+    border: 1px solid #9E7C69;
+    padding: 8px 27px;
+    font-size: 14px;
+    font-family: PingFangSC-Medium, PingFang SC;
+    font-weight: 500;
+    color: #9E7C69;
+    line-height: 20px;
+}
+.radio_label_admin.active{
+    background: #9E7C69;
+    color: #FFFFFF;
+}
+.radio_label_admin input[type="radio"]{
+    -webkit-appearance:none;
+    width: 0;
+    height: 0;
+}

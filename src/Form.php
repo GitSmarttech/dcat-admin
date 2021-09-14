@@ -69,6 +69,8 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\Captcha                captcha()
  * @method Field\Listbox                listbox($column, $label = '')
  * @method Field\File                   file($column, $label = '')
+ * @method Field\OBSFile                OBSFile($column, $label = '')
+ * @method Field\OBSMultipleFile        OBSMultipleFile($column, $label = '')
  * @method Field\Image                  image($column, $label = '')
  * @method Field\MultipleFile           multipleFile($column, $label = '')
  * @method Field\MultipleImage          multipleImage($column, $label = '')
@@ -88,6 +90,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\Button                 button(string $html = null)
  * @method Field\DisplayHao             displayHao($column, $label = '')
  * @method Field\TextWithSelect         textWithSelect($column, $label = '')
+ * @method Field\SelectButton           selectButton($column, $label = '')
  */
 class Form implements Renderable
 {
@@ -154,6 +157,8 @@ class Form implements Renderable
         'captcha'             => Field\Captcha::class,
         'listbox'             => Field\Listbox::class,
         'file'                => Field\File::class,
+        'OBSFile'             => Field\OBSFile::class,
+        'OBSMultipleFile'     => Field\OBSMultipleFile::class,
         'image'               => Field\Image::class,
         'multipleFile'        => Field\MultipleFile::class,
         'multipleImage'       => Field\MultipleImage::class,
@@ -172,6 +177,7 @@ class Form implements Renderable
         'multipleSelectTable' => Field\MultipleSelectTable::class,
         'displayHao'          => Field\DisplayHao::class,
         'textWithSelect'      => Field\TextWithSelect::class,
+        'selectButton'        => Field\SelectButton::class,
     ];
 
     /**

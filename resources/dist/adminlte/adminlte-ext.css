@@ -510,16 +510,16 @@ ul {
     .main-sidebar, .main-sidebar:before{
         width: 210px;
     }
-    .navbar-header .logo-lg img{
-        max-width:100% !important;
+    .navbar-header .logo-lg img{
+        max-width: 100% !important;
     }
-    .main-sidebar .nav .nav-item .nav-link {
+    .main-sidebar .nav .nav-item .nav-link {
         padding: 18px 20px 18px 54px !important;
     }
-    .header-navbar.fixed-top {
-        left: 210px;
+    .header-navbar.fixed-top {
+        left:  210px;
     }
-    body:not(.sidebar-mini-md) .content-wrapper, body:not(.sidebar-mini-md) .main-footer, body:not(.sidebar-mini-md) .main-header {
+    body:not(.sidebar-mini-md) .content-wrapper, body:not(.sidebar-mini-md) .main-footer,body:not(sidebar-mini-md) .main-header {
         margin-left: 210px;
     }
 }

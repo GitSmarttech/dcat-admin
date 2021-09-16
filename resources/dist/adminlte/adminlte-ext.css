@@ -523,3 +523,10 @@ ul {
         margin-left: 210px;
     }
 }
+
+.table.custom-data-table.data-table .grid__actions__,.table.custom-data-table.data-table .grid__actions__ a{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+}

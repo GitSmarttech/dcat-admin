@@ -50,6 +50,8 @@
 
 .navbar-header .nav-item .avatar-info .avatar-top img {
     width: 124px;
+    border-radius: 62px;
+    overflow: hidden;
 }
 
 .navbar-header .nav-item .avatar-info .avatar-name {
@@ -537,6 +539,10 @@ ul {
     font-size: 18px;
     padding: 0;
     line-height: 32px;
+    background-color: #ffffff !important;
+    color: #9E7C69;
+    border: 1px solid #9E7C69;
+    box-sizing: border-box;
 }
 .feather.fa.fa-fw.aliiconfont.icon-details{
     width: 32px;
@@ -550,7 +556,7 @@ ul {
         width: 210px;
     }
     .navbar-header .logo-lg img{
-        max-width: 100% !important;
+        max-width: 85% !important;
     }
     .main-sidebar .nav .nav-item .nav-link {
         padding: 18px 20px 18px 54px !important;

@@ -31,6 +31,9 @@
 
                     {!! admin_section(Dcat\Admin\Admin::SECTION['LEFT_SIDEBAR_MENU_BOTTOM']) !!}
                 </ul>
+                <div class="sidebar-ext-box">
+                    <a href="{{admin_url('auth/logout')}}">退出</a> <span>&nbsp;&nbsp;|&nbsp;&nbsp;</span> <a href="{{admin_url('auth/setting')}}">编辑</a>
+                </div>
             </div>
         </aside>
     </div>

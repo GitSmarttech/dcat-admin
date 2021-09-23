@@ -244,11 +244,11 @@
       rand_name = rand_name + '.' + ext;
 
       // 打开蒙版
-      let loading = layer.open({
-        type: 3,
-        icon: 1,
-        shade: [0.8, '#393D49']
-      });
+      // let loading = layer.open({
+      //   type: 3,
+      //   icon: 1,
+      //   shade: [0.8, '#393D49']
+      // });
 
       // 获取OBS实例
       let file_url;
@@ -260,7 +260,7 @@
         Key: rand_name,
         SourceFile: file,
       }, function (err, result) {
-        layer.close(loading);
+        // layer.close(loading);
         if (err) {
           // 上传失败
           cleanFile();

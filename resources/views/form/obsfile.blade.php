@@ -231,11 +231,11 @@
         let obsClient = getOBSClient();
 
         // 打开蒙版
-        let loading = layer.open({
-            type: 3,
-            icon: 1,
-            shade: [0.8, '#393D49']
-        });
+        // let loading = layer.open({
+        //     type: 3,
+        //     icon: 1,
+        //     shade: [0.8, '#393D49']
+        // });
 
         // 上传文件
         obsClient.putObject({
@@ -243,7 +243,7 @@
             Key: rand_name,
             SourceFile: file,
         }, function (err, result) {
-            layer.close(loading);
+            // layer.close(loading);
             if (err) {
                 console.log(err);
                 // 上传失败

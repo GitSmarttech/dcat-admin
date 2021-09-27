@@ -627,18 +627,26 @@ ul {
 .form-horizontal .filter-input .form-control.filter-column-title{
     max-height: 42px;
     height: 42px;
+    border-color: #DBDBDB !important;
     border-left: none;
     font-size: 16px;
     font-family: PingFangSC-Regular, PingFang SC;
     font-weight: 400;
     color: #292422;
+    background-color: #fff;
 }
 .form-horizontal .filter-input .form-control:focus {
     color: #4e5154;
-    background-color: #fff;
-    border-color: #DBDBDB;
-    outline: 0;
+    background-color: #fff !important;
     box-shadow: none;
+    outline: none;
+}
+.form-horizontal .filter-input .form-control:-webkit-autofill,
+.form-horizontal .filter-input .form-control:-webkit-autofill:hover,
+.form-horizontal .filter-input .form-control:-webkit-autofill:focus{
+    background-color: #fff !important;
+    box-shadow: 0 0 0 60px #fff inset;
+
 }
 .form-horizontal .filter-input .form-control.filter-column-title::-webkit-input-placeholder{
     color: #fff;
@@ -652,12 +660,13 @@ ul {
 .form-horizontal .filter-input .selection .select2-selection{
     border-left: none;
     min-height: 42px;
+    outline: none;
 }
 .form-horizontal .filter-input .selection .select2-selection .select2-selection__clear{
-    height: 42px;
+    height: 40px;
 }
 .form-horizontal .filter-input .selection .select2-selection .select2-selection__arrow{
-    height: 42px !important;
+    height: 40px !important;
     top: 0;
     width: 30px;
 }

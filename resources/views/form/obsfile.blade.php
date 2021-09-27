@@ -129,13 +129,7 @@
     .obs-file-hidden-input {
         display: none;
     }
-    #layui-layer1{
-        box-shadow: unset !important;
-    }
-    #layui-layer1 .layui-layer-content{
-        top: 50%;
-        left: 50%;
-    }
+    
 </style>
 <div class="{{$viewClass['form-group']}} {{ $class }}">
     <label for="{{$column}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>

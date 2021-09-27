@@ -129,6 +129,13 @@
     .obs-file-hidden-input {
         display: none;
     }
+    #layui-layer1{
+        box-shadow: unset !important;
+    }
+    #layui-layer1 .layui-layer-content{
+        top: 50%;
+        left: 50%;
+    }
 </style>
 <div class="{{$viewClass['form-group']}} {{ $class }}">
     <label for="{{$column}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
@@ -230,12 +237,8 @@
         let file_url;
         let obsClient = getOBSClient();
 
-        // 打开蒙版
-        // let loading = layer.open({
-        //     type: 3,
-        //     icon: 1,
-        //     shade: [0.8, '#393D49']
-        // });
+        // 显示上传动画
+        let loading = layer.load(1);
 
         // 上传文件
         obsClient.putObject({
@@ -243,7 +246,7 @@
             Key: rand_name,
             SourceFile: file,
         }, function (err, result) {
-            // layer.close(loading);
+            layer.close(loading);
             if (err) {
                 console.log(err);
                 // 上传失败

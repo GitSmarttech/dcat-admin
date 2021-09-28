@@ -733,18 +733,6 @@ ul {
     height: 42px;
     box-shadow: none;
 }
-.form-horizontal .btn-group .btn{
-    height: 42px;
-    border-color: #DBDBDB;
-    background: #fff;
-    font-size: 16px;
-    font-family: PingFangSC-Regular, PingFang SC;
-    font-weight: 400;
-    color: #292422;
-}
-.form-horizontal .btn-group .feather{
-    color: #8D8D8D;
-}
 .form-horizontal .filter-input .form-group{
     min-width: 200px;
 }

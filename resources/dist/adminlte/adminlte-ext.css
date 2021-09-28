@@ -210,6 +210,14 @@ html,body{
     background-color: #B3B3B3;
     color: #ffffff;
 }
+
+.select2-container--default .select2-selection--single .select2-selection__rendered{
+    line-height: 30px !important;
+    font-size: 13px;
+    font-family: PingFangSC-Regular, PingFang SC;
+    font-weight: 400;
+    color: #292422;
+}
 @media (min-width:576px){
     .grid__actions__>a{
         min-width: 40px;
@@ -221,9 +229,52 @@ html,body{
     }
 }
 @media (min-width:1200px){
-    .layui-layer{
+    /* .layui-layer{
         width: 650px !important;
         height: 540px !important;
+    } */
+    .layui-layer.layui-layer-page .fields-group .input-group .form-control{
+        height: 42px;
+        font-size: 14px;
+    }
+    .layui-layer.layui-layer-page .fields-group .input-group .input-group-text{
+        max-height: 42px;
+    }
+    .layui-layer.layui-layer-page .fields-group .web-uploader .queueList .placeholder.dnd-area{
+        height: 200px;
+    }
+    .layui-layer.layui-layer-page .fields-group .no-margin .box-body{
+        margin-top: 5px;
+    }
+    .layui-layer.layui-layer-page .fields-group .switchery.switchery-small{
+        margin-top: 5px;
+    }
+    .layui-layer.layui-layer-page .layui-layer-btn{
+        padding: 0 11rem 30px 15px;
+    }
+    .layui-layer.layui-layer-page .layui-layer-btn>a{
+        font-size: 16px;
+        line-height: 24px !important;
+    }
+    .layui-layer.layui-layer-page .form-group .selection .select2-selection{
+        height: 42px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered{
+        line-height: 38px !important;
+        font-size: 13px;
+        font-family: PingFangSC-Regular, PingFang SC;
+        font-weight: 400;
+        color: #292422;
+    }
+    .layui-layer.layui-layer-page .form-group .select2-container--default .select2-selection--multiple .select2-selection__choice{
+        margin-top: 10px;
+    }
+    .layui-layer.layui-layer-page .form-group .select2-container .select2-search--inline .select2-search__field{
+        margin-top: 10px;
+    }
+    .layui-layer.layui-layer-page .form-group .fa.feather.icon-help-circle{
+        margin-top: 10px;
     }
 }
 @media (max-width: 992px) {
@@ -394,6 +445,9 @@ html,body{
         max-width: 100px;
         padding-left: 0;
     }
+    .layui-layer.layui-layer-page .form-group .control-label{
+        font-size: 17px !important;
+    }
 }
 
 ul {
@@ -488,7 +542,8 @@ ul {
     border-radius: 2px;
     border: 1px solid #9E7C69;
     padding: 8px 27px;
-    font-size: 14px;
+    /* font-size: 14px; */
+    font-size: 16px;
     font-family: PingFangSC-Medium, PingFang SC;
     font-weight: 500;
     color: #9E7C69;
@@ -571,7 +626,7 @@ ul {
 /* 筛选按钮，table布局 */
 .content .content-wrapper {
     /* padding: 30px 2.5rem 0; */
-    padding: calc(2.35rem + 19px) 2.5rem 0;
+    padding: calc(2.35rem + 17px) 2.5rem 0;
 }
 .administrator-page .table-wrapper {
     min-height: 58vh;
@@ -592,7 +647,8 @@ ul {
     min-height: 896px !important;
 }
 .table-responsive .top .btn{
-    line-height: 100%;
+    /* line-height: 100%; */
+    line-height: 18px;
     font-size: 15px;
 }
 .filter-box.card .form-horizontal .btn{
@@ -602,13 +658,6 @@ ul {
 }
 .filter-box.card .form-horizontal .btn.reset{
     line-height: 26px;
-}
-.select2-container--default .select2-selection--single .select2-selection__rendered{
-    line-height: 44px !important;
-    font-size: 13px;
-    font-family: PingFangSC-Regular, PingFang SC;
-    font-weight: 400;
-    color: #292422;
 }
 .table.custom-data-table.data-table .grid__actions__ a {
     margin-bottom: 3px;
@@ -726,4 +775,18 @@ ul {
     font-family: PingFangSC-Regular, PingFang SC;
     font-weight: 400;
     color: #9E7C69;
+}
+.administrator-page table.custom-data-table.data-table tbody .grid__actions__{
+    text-align: center;
+    min-width: 180px;
+}
+.layui-layer.layui-layer-page{
+    left: 0;
+}
+.layui-layer.layui-layer-page{
+    width: 100% !important;
+    height: 100% !important;
+}
+.layui-layer.layui-layer-page .no-margin .box-body{
+    font-size: 14px;
 }

@@ -129,7 +129,25 @@
     .obs-file-hidden-input {
         display: none;
     }
-    
+    .obs-upload-loading{
+        max-width: 150px;
+        width: 150px;
+        border: 1px solid #D3D4D3;
+        padding: 10px 10px 10px 20px;
+        background: #fff;
+        position: fixed;
+        left: 50%;
+        top: 40%;
+        display: none;
+    }
+    .obs-upload-loading img{
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+    }
+    .obs-upload-loading span{
+        display: inline-block;
+    }
 </style>
 <div class="{{$viewClass['form-group']}} {{ $class }}">
     <label for="{{$column}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
@@ -151,141 +169,146 @@
         @include('admin::form.help-block')
     </div>
 </div>
+<div class="obs-upload-loading">
+    <img src="/static/images/admin/loading-2.gif" alt="">
+    &nbsp;
+    <span>上传中</span>
+</div>
 <script src="vendor/dcat-admin/dcat/plugins/obs/esdk-obs-browserjs-3.19.5.min.js"></script>
 <script type="text/javascript">
-    let video = $('#aa');
-    video.on('canplaythrough',function () {
-        var second = Math.ceil(video[0].duration);
-        document.getElementById('duration').value = second;
-        console.log(document.getElementById('duration').value);
-    })
+  let video = $('#aa');
+  video.on('canplaythrough',function () {
+    var second = Math.ceil(video[0].duration);
+    document.getElementById('duration').value = second;
+    console.log(document.getElementById('duration').value);
+  })
 </script>
 <script require="@obsmanager" init="{!! $selector !!}">
-    let input = $this.find('input');
-    let cForm = '#{{$formId}}';
+  let input = $this.find('input');
+  let cForm = '#{{$formId}}';
 
-    let value = "{{$value}}";
-    if (value) {
+  let value = "{{$value}}";
+  if (value) {
+    // 隐藏上传文件的按钮
+    $this.find('.obs-file input,.obs-file .obs-file-label').hide();
+    // 显示文件列表容器
+    $this.find('.file-list').show();
+    // 添加文件名到文件列表
+    let file_item = makeFileRow(value);
+    $this.find('.file-list').append(file_item);
+    // 添加文件表单
+    let file_input = '<input name="{{$name}}" class="file-input" type="hidden" value="' + value + '">';
+    $this.find('.obs-file-hidden-input').append(file_input);
+  }
+
+  function makeFileRow (name = '未知') {
+    let html = '                <li>\n' +
+      '                    <p class="title">' + name + '</p>\n' +
+      '                    <span class="file-action">\n' +
+      '                        <i class="feather icon-x red-dark"></i>\n' +
+      '                    </span>\n' +
+      '                </li>';
+    return html;
+  }
+
+  function cleanFile () {
+    // 删除文件列表
+    $this.find('.file-list').empty();
+    // 显示上传按钮
+    $this.find('.obs-file input,.obs-file .obs-file-label').show();
+    // 隐藏文件列表容器
+    $this.find('.file-list').hide();
+    // 清空文件
+    let obj = $this.find('input[type="file"]');
+    obj[0].value = '';
+    // 清空文件表单
+    $this.find('input[name="{{$name}}"]')[0].value = '';
+  }
+
+  // 如果触发删除
+  $('body').on('click','{{$selector}} .file-action', function () {
+    cleanFile();
+  });
+
+  // 上传文件
+  input.on('change', function () {
+    // 获取当前文件
+    let file = input[0].files[0];
+
+    // 获取文件大小
+    let file_size = file.size;
+    // 如果文件大于1G，不允许上传
+    if (false || file_size > 1073741824) {
+      Dcat.error('文件大小超出最大限制');
+      return false;
+    }
+    let url = URL.createObjectURL(file);
+    document.getElementById('aa').src = url;
+
+    // 获取随机文件名
+    let rand_name = "{{$uniqueId}}";
+    let arr = file.name.split('.');
+    let ext = arr[1];
+    rand_name = rand_name + '.' + ext;
+
+    let file_url;
+    let obsClient = getOBSClient();
+
+    // 显示上传动画
+    $('.obs-upload-loading').eq(0).css('display','block');
+
+    // 上传文件
+    obsClient.putObject({
+      Bucket: "{{env('OBS_BUCKET')}}",
+      Key: rand_name,
+      SourceFile: file,
+    }, function (err, result) {
+      $('.obs-upload-loading').eq(0).css('display','none');
+      if (err) {
+        console.log(err);
+        // 上传失败
+        cleanFile();
+        Dcat.error('文件上傳失敗，請稍後重試或聯繫管理員');
+        return false;
+      }else {
+        file_url = "{{env('OBS_CDN')}}/" + rand_name;
+
         // 隐藏上传文件的按钮
         $this.find('.obs-file input,.obs-file .obs-file-label').hide();
         // 显示文件列表容器
         $this.find('.file-list').show();
         // 添加文件名到文件列表
-        let file_item = makeFileRow(value);
+        let file_item = makeFileRow(file_url);
         $this.find('.file-list').append(file_item);
-        // 添加文件表单
-        let file_input = '<input name="{{$name}}" class="file-input" type="hidden" value="' + value + '">';
+
+        // 将文件url添加到表单中
+        let file_input = '<input name="{{$name}}" class="file-input" type="hidden" value="' + file_url + '">';
         $this.find('.obs-file-hidden-input').append(file_input);
-    }
+      }
+    })
 
-    function makeFileRow (name = '未知') {
-        let html = '                <li>\n' +
-            '                    <p class="title">' + name + '</p>\n' +
-            '                    <span class="file-action">\n' +
-            '                        <i class="feather icon-x red-dark"></i>\n' +
-            '                    </span>\n' +
-            '                </li>';
-        return html;
-    }
 
-    function cleanFile () {
-        // 删除文件列表
-        $this.find('.file-list').empty();
-        // 显示上传按钮
-        $this.find('.obs-file input,.obs-file .obs-file-label').show();
-        // 隐藏文件列表容器
-        $this.find('.file-list').hide();
-        // 清空文件
-        let obj = $this.find('input[type="file"]');
-        obj[0].value = '';
-        // 清空文件表单
-        $this.find('input[name="{{$name}}"]')[0].value = '';
-    }
+  });
 
-    // 如果触发删除
-    $('body').on('click','{{$selector}} .file-action', function () {
-        cleanFile();
+  function getOBSClient () {
+    return new ObsClient({
+      access_key_id: "{{env('OBS_KEY')}}", // 配置AK
+      secret_access_key: "{{env('OBS_ACCESS')}}", // 配置SK
+      server: "{{env('OBS_SERVER')}}", // 配置服务地址
+      timeout: 3000,
+      useRawXhr: true
     });
+  }
 
-    // 上传文件
-    input.on('change', function () {
-        // 获取当前文件
-        let file = input[0].files[0];
-
-        // 获取文件大小
-        let file_size = file.size;
-        // 如果文件大于1G，不允许上传
-        if (false || file_size > 1073741824) {
-            Dcat.error('文件大小超出最大限制');
-            return false;
-        }
-        let url = URL.createObjectURL(file);
-        document.getElementById('aa').src = url;
-
-        // 获取随机文件名
-        let rand_name = "{{$uniqueId}}";
-        let arr = file.name.split('.');
-        let ext = arr[1];
-        rand_name = rand_name + '.' + ext;
-
-        let file_url;
-        let obsClient = getOBSClient();
-
-        // 显示上传动画
-        let loading = layer.load(1);
-
-        // 上传文件
-        obsClient.putObject({
-            Bucket: "{{env('OBS_BUCKET')}}",
-            Key: rand_name,
-            SourceFile: file,
-        }, function (err, result) {
-            layer.close(loading);
-            if (err) {
-                console.log(err);
-                // 上传失败
-                cleanFile();
-                Dcat.error('文件上傳失敗，請稍後重試或聯繫管理員');
-                return false;
-            }else {
-                file_url = "{{env('OBS_CDN')}}/" + rand_name;
-
-                // 隐藏上传文件的按钮
-                $this.find('.obs-file input,.obs-file .obs-file-label').hide();
-                // 显示文件列表容器
-                $this.find('.file-list').show();
-                // 添加文件名到文件列表
-                let file_item = makeFileRow(file_url);
-                $this.find('.file-list').append(file_item);
-
-                // 将文件url添加到表单中
-                let file_input = '<input name="{{$name}}" class="file-input" type="hidden" value="' + file_url + '">';
-                $this.find('.obs-file-hidden-input').append(file_input);
-            }
-        })
-
-
-    });
-
-    function getOBSClient () {
-        return new ObsClient({
-            access_key_id: "{{env('OBS_KEY')}}", // 配置AK
-            secret_access_key: "{{env('OBS_ACCESS')}}", // 配置SK
-            server: "{{env('OBS_SERVER')}}", // 配置服务地址
-            timeout: 3000,
-            useRawXhr: true
-        });
-    }
-
-    var OBSProgressCallback = function (transferredAmount, totalAmount, totalSeconds) {
-        console.log('监听进度');
-        // 获取上传平均速率（KB/S）
-        let speed = transferredAmount * 1.0 / totalSeconds / 1024;
-        console.log(speed + 'KB/S');
-        // 获取上传进度百分比
-        let percent = transferredAmount * 100.0 / totalAmount;
-        console.log(percent + '%');
-    };
+  var OBSProgressCallback = function (transferredAmount, totalAmount, totalSeconds) {
+    console.log('监听进度');
+    // 获取上传平均速率（KB/S）
+    let speed = transferredAmount * 1.0 / totalSeconds / 1024;
+    console.log(speed + 'KB/S');
+    // 获取上传进度百分比
+    let percent = transferredAmount * 100.0 / totalAmount;
+    console.log(percent + '%');
+  };
 
 </script>
 

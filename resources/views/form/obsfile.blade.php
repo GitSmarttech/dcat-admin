@@ -139,6 +139,7 @@
         left: 50%;
         top: 40%;
         display: none;
+        z-index: 11;
     }
     .obs-upload-loading img{
         display: inline-block;
@@ -169,7 +170,7 @@
         @include('admin::form.help-block')
     </div>
 </div>
-<div class="obs-upload-loading">
+<div class="obs-upload-loading" id="loading{{$duration_name}}">
     <img src="/static/images/admin/loading-2.gif" alt="">
     &nbsp;
     <span>上传中</span>
@@ -255,7 +256,7 @@
         let obsClient = getOBSClient();
 
         // 显示上传动画
-        $('.obs-upload-loading').eq(0).css('display','block');
+        $('#loading{{$duration_name}}').eq(0).css('display','block');
 
         // 上传文件
         obsClient.putObject({
@@ -263,7 +264,7 @@
             Key: rand_name,
             SourceFile: file,
         }, function (err, result) {
-            $('.obs-upload-loading').eq(0).css('display','none');
+            $('#loading{{$duration_name}}').eq(0).css('display','none');
             if (err) {
                 console.log(err);
                 // 上传失败

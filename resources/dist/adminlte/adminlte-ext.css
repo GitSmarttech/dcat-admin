@@ -778,3 +778,32 @@ ul {
 .layui-layer.layui-layer-page .no-margin .box-body{
     font-size: 14px;
 }
+/* 分隔输入框样式 */
+.tab-content .tab-pane .form-group .div-box{
+    background-color: white;
+    border: 1px solid #dbe3e6;
+    cursor: text;
+    border-radius: .25rem;
+    position: relative;
+}
+.tab-content .tab-pane .form-group .div-box .ul-span{
+}
+.tab-content .tab-pane .form-group .div-box .ul-item{
+    cursor: default;
+    border-radius: 4px;
+    font-size: 90%;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+.tab-content .tab-pane .form-group .div-box .ul-item .del-span{
+    margin-left: 10px;
+    cursor: pointer;
+}
+.tab-content .tab-pane .form-group .div-box .del-ul{
+    color: black;
+    position: absolute;
+    right: 17px;
+    top: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}

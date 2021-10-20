@@ -1,9 +1,10 @@
 <style>
     .div-box {
         border: 1px solid #586cb1;
-        height: 40px;
+        min-height: 34px;
+        height: auto;
         display: flex;
-        padding: 0 10px;
+        padding: 0 26px 0 10px;
     }
 
     .input-box {
@@ -18,10 +19,10 @@
     }
 
     .ul-item {
-        padding: 2px 10px;
+        padding: 2px 5px;
         background-color: #586cb1;
         color: white;
-        margin-right: 10px;
+        margin-right: 5px;
     }
 </style>
 <div class="{{$viewClass['form-group']}} {{ $class }}">
@@ -36,10 +37,11 @@
                     <span class="ul-item">
                         {{$option}}
                         <input name='{{$name}}[]' value='{{$option}}' style = 'display:none'>
+                        <span class="del-span">×</span>
                     </span>
                 @endforeach
-
             </div>
+            <span class="del-ul">×</span>
             <input type="text" class="input-box">
         </div>
         @include('admin::form.help-block')
@@ -54,7 +56,7 @@
         })
         $(".input-box").eq(0).blur(function () {
             if ($(this).val() != '') {
-                let html = "<span class='ul-item'>" + $(this).val() + "<input name='"+name+"[]' value='" + $(this).val() + "' style = 'display:none'></span>"
+                let html = "<span class='ul-item'>" + $(this).val() + "<input name='"+name+"[]' value='" + $(this).val() + "' style = 'display:none'><span class='del-span'>×</span></span>"
                 $(".ul-span").eq(0).append(html);
                 $(this).val("")
             }
@@ -74,17 +76,21 @@
                 });
                 let self= $(".input-box").eq(0)
                 if ($(self).val() != '') {
-                    let html = "<span class='ul-item'>" + $(self).val() + "<input name='"+name+"[]' value='" + $(self).val() + "' style = 'display:none'></span>"
+                    let html = "<span class='ul-item'>" + $(self).val() + "<input name='"+name+"[]' value='" + $(self).val() + "' style = 'display:none'><span class='del-span'>×</span></span>"
                     $(".ul-span").eq(0).append(html);
                     $(self).val("")
                 }
             }
         });
-        $(".ul-span").on('click','.ul-item',function(e){
-
-            // let index = $(this).index() + 1;
+        $(".del-ul").click(function () {
+            $(".ul-item").each(function(){
+                $(this).remove();
+            })
+        })
+        $(".ul-span").on('click','.del-span',function(e){
             console.log(1,$(this))
-            $(this).remove()
+            let item=$(this).parent(".ul-item");
+            $(item).remove();
         })
     })
 

@@ -12,6 +12,10 @@ class OBSFile extends Field
 {
     protected $view = 'admin::form.obsfile';
 
+    protected $duration=null;
+
+    protected $duration_name=null;
+
     public static $js = [
         '@obsmanager',
     ];
@@ -28,7 +32,20 @@ class OBSFile extends Field
 
     public function render()
     {
+        $this->addVariables(
+            [
+                'duration' => $this->duration,
+                'duration_name' => $this->duration_name,
+            ]
+        );
+
         return parent::render();
+    }
+
+    public function duration($name,$time = null){
+        $this->duration_name = $name;
+        $this->duration = $time;
+        return $this;
     }
 
     public function uuid($pre = null)

@@ -89,6 +89,7 @@ use Symfony\Component\HttpFoundation\Response;
  * @method Field\MultipleSelectTable    multipleSelectTable($column, $label = '')
  * @method Field\Button                 button(string $html = null)
  * @method Field\MultipleText           multipleText($column, $label = '')
+ * @method Field\KeyCheck               keyCheck($column, $label = '')
  */
 class Form implements Renderable
 {
@@ -174,6 +175,7 @@ class Form implements Renderable
         'selectTable'         => Field\SelectTable::class,
         'multipleSelectTable' => Field\MultipleSelectTable::class,
         'multipleText'        => Field\MultipleText::class,
+        'keyCheck'            => Field\KeyCheck::class,
     ];
 
     /**

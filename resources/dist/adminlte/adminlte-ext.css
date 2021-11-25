@@ -1,0 +1,6 @@
+.activeTd .form-control:focus{
+    box-shadow:none;
+}
+.activeTd .form-control{
+    width: 50px;
+}

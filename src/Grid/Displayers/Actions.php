@@ -222,6 +222,31 @@ class Actions extends AbstractDisplayer
         }
     }
 
+    public function allActions(){
+        $this->resetDefaultActions();
+
+        $toString = [Helper::class, 'render'];
+
+        $prepends = array_map($toString, $this->prepends);
+        $appends = array_map($toString, $this->appends);
+
+        foreach ($this->actions as $action => $enable) {
+            if ($enable) {
+                $method = 'render'.ucfirst($action);
+                array_push($prepends, $this->{$method}());
+            }
+        }
+
+        return array_merge($prepends, $appends);
+    }
+
+    public function sortActions($array = null){
+        if ($array){
+            $this->allActions = $array;
+        }
+        return $this;
+    }
+
     /**
      * {@inheritdoc}
      */

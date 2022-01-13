@@ -87,15 +87,34 @@
     function replaceNestedFormIndex(value) {
         return String(value).replace(/{{ Dcat\Admin\Form\NestedForm::DEFAULT_KEY_NAME }}/g, nestedIndex);
     }
-
-    $(container).on('click', '.add', function () {
+    var addEleBtn='.has-many-{{ $columnClass }} .add'
+    $(addEleBtn).eq(0).on('click',  function () {
+        console.log(222)
         var tpl = $('template.{{ $columnClass }}-tpl');
 
         nestedIndex++;
-
         var template = replaceNestedFormIndex(tpl.html());
+
         $('.has-many-{{ $columnClass }}-forms').append(template);
+        $('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(2).find('.field_password_').eq(0).removeAttr('readonly')
+        $('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(3).find('.field_new_password_').eq(0).attr('readonly',"readonly")
+        $('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(3).find('.field_new_password_').eq(0).attr('hidden',"true")
+        $('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(3).find('.field_new_password_').eq(0).val('new');
+        if($('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(3).find('.field_new_password_').length !== 0){
+            var inputEle=$('.has-many-{{ $columnClass }}-forms').children('tr:last-child').children('td').eq(3).find('.input-group').eq(0)
+            var inputHtml=`<input build-ignore="1" type="password" value="" class="form-control field_port_agency_account_ field_new_password_ field_new_password" placeholder="Input New Password" readonly="readonly">`
+            inputEle.append(inputHtml)
+        }
     });
+    {{--$(container).on('click', '.add', function () {--}}
+    {{--    var tpl = $('template.{{ $columnClass }}-tpl');--}}
+
+    {{--    nestedIndex++;--}}
+
+    {{--    var template = replaceNestedFormIndex(tpl.html());--}}
+
+    {{--    $('.has-many-{{ $columnClass }}-forms').append(template);--}}
+    {{--});--}}
 
     $(container).on('click', '.remove', function () {
         var $form = $(this).closest('.has-many-{{ $columnClass }}-form');

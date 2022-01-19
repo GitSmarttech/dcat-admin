@@ -16,6 +16,9 @@
                 <p>
                     {{ $builder->translate($item['title']) }}
                 </p>
+                @if(isset($item['msg']) && $item['msg'] === 1)
+                    <i class="right fa fa-circle" style="font-size: 0.5rem;color: red;"></i>
+                @endif
             </a>
         </li>
     @else

@@ -2,6 +2,7 @@
 
 namespace Dcat\Admin\Layout;
 
+use App\Models\AdminRoleMenu;
 use Dcat\Admin\Admin;
 use Dcat\Admin\Support\Helper;
 use Lang;
@@ -171,11 +172,22 @@ class Menu
         }
 
         $show = $item['show'] ?? null;
-        if ($show !== null && ! $show) {
+        if (Admin::user()->isRole('administrator')){
+            if ($show !== null && ! $show) {
+                return false;
+            }
+
+            return true;
+        }else{
+            $role_id = Admin::user()->roles[0]->id;
+            $menuModel = config('admin.database.menu_model');
+            $menu_ids = AdminRoleMenu::where('role_id',$role_id)->pluck('menu_id')->toArray();
+
+            if (in_array($item['id'],$menu_ids)){
+                return true;
+            }
             return false;
         }
-
-        return true;
     }
 
     /**

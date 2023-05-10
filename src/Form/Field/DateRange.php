@@ -6,8 +6,19 @@ use Dcat\Admin\Form\Field;
 
 class DateRange extends Field
 {
+    public static $js = [
+        '@moment',
+        '@bootstrap-datetimepicker',
+    ];
+    public static $css = '@bootstrap-datetimepicker';
+
     protected $format = 'YYYY-MM-DD';
 
+    /**
+     * Column name.
+     *
+     * @var string
+     */
     protected $column = [];
 
     public function __construct($column, $arguments)
@@ -17,6 +28,7 @@ class DateRange extends Field
 
         array_shift($arguments);
         $this->label = $this->formatLabel($arguments);
+        $this->id = $this->formatId($this->column);
 
         $this->options(['format' => $this->format]);
     }
@@ -34,13 +46,29 @@ class DateRange extends Field
     {
         $this->options['locale'] = config('app.locale');
 
-        $this->addVariables(['options' => $this->options]);
+        $startOptions = json_encode($this->options);
+        $endOptions = json_encode($this->options + ['useCurrent' => false]);
+
+        $class = $this->getElementClassSelector();
+
+        $this->script = <<<JS
+            $('{$class['start']}').datetimepicker($startOptions);
+            $('{$class['end']}').datetimepicker($endOptions);
+            $("{$class['start']}").on("dp.change", function (e) {
+                $('{$class['end']}').data("DateTimePicker").minDate(e.date);
+            });
+            $("{$class['end']}").on("dp.change", function (e) {
+                $('{$class['start']}').data("DateTimePicker").maxDate(e.date);
+            });
+JS;
 
         return parent::render();
     }
 
     /**
-     * {@inheritDoc}
+     * Get validation messages for the field.
+     *
+     * @return array|mixed
      */
     public function getValidationMessages()
     {

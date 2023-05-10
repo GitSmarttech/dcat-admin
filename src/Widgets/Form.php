@@ -5,12 +5,11 @@ namespace Dcat\Admin\Widgets;
 use Closure;
 use Dcat\Admin\Admin;
 use Dcat\Admin\Contracts\LazyRenderable;
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Form\Concerns\HandleCascadeFields;
-use Dcat\Admin\Form\Concerns\HasLayout;
 use Dcat\Admin\Form\Concerns\HasRows;
 use Dcat\Admin\Form\Concerns\HasTabs;
 use Dcat\Admin\Form\Field;
+use Dcat\Admin\Form\Layout;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasAuthorization;
 use Dcat\Admin\Traits\HasFormResponse;
@@ -57,7 +56,7 @@ use Illuminate\Validation\Validator;
  * @method Field\SwitchField         switch($column, $label = '')
  * @method Field\Display             display($column, $label = '')
  * @method Field\Rate                rate($column, $label = '')
- * @method Field\Divide              divider(string $title = null)
+ * @method Field\Divide              divider()
  * @method Field\Password            password($column, $label = '')
  * @method Field\Decimal             decimal($column, $label = '')
  * @method Field\Html                html($html, $label = '')
@@ -66,10 +65,12 @@ use Illuminate\Validation\Validator;
  * @method Field\Embeds              embeds($column, $label = '')
  * @method Field\Captcha             captcha($column, $label = '')
  * @method Field\Listbox             listbox($column, $label = '')
+ * @method Field\SelectResource      selectResource($column, $label = '')
  * @method Field\File                file($column, $label = '')
  * @method Field\Image               image($column, $label = '')
  * @method Field\MultipleFile        multipleFile($column, $label = '')
  * @method Field\MultipleImage       multipleImage($column, $label = '')
+ * @method Field\HasMany             hasMany($column, \Closure $callback)
  * @method Field\Tree                tree($column, $label = '')
  * @method Field\Table               table($column, $callback)
  * @method Field\ListField           list($column, $label = '')
@@ -91,7 +92,6 @@ class Form implements Renderable
     use HandleCascadeFields;
     use HasRows;
     use HasTabs;
-    use HasLayout;
     use HasFormResponse {
         setCurrentUrl as defaultSetCurrentUrl;
     }
@@ -114,6 +114,11 @@ class Form implements Renderable
     protected $fields;
 
     /**
+     * @var Layout
+     */
+    protected $layout;
+
+    /**
      * @var array
      */
     protected $variables = [];
@@ -121,7 +126,7 @@ class Form implements Renderable
     /**
      * @var bool
      */
-    protected $ajax = true;
+    protected $useAjaxSubmit = true;
 
     /**
      * @var Fluent
@@ -163,10 +168,7 @@ class Form implements Renderable
      */
     protected $confirm = [];
 
-    /**
-     * @var bool
-     */
-    protected $validationErrorToastr = true;
+    protected $hasColumns = false;
 
     /**
      * Form constructor.
@@ -274,20 +276,6 @@ class Form implements Renderable
     }
 
     /**
-     * 设置使用 Toastr 展示字段验证信息.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function validationErrorToastr(bool $value = true)
-    {
-        $this->validationErrorToastr = $value;
-
-        return $this;
-    }
-
-    /**
      * Set primary key.
      *
      * @param mixed $value
@@ -312,7 +300,9 @@ class Form implements Renderable
     }
 
     /**
-     * @return Fluent|\Illuminate\Database\Eloquent\Model
+     * @param array|Arrayable|Closure $data
+     *
+     * @return Fluent
      */
     public function data()
     {
@@ -330,21 +320,13 @@ class Form implements Renderable
      */
     public function fill($data)
     {
-        if ($data instanceof \Closure) {
-            $data = $data($this);
-        }
-
-        if (is_array($data)) {
-            $this->data = new Fluent($data);
-        } elseif ($data instanceof Arrayable) {
-            $this->data = $data;
-        }
+        $this->data = new Fluent(Helper::array($data));
 
         return $this;
     }
 
     /**
-     * @return Fluent|\Illuminate\Database\Eloquent\Model
+     * @return Fluent
      */
     public function model()
     {
@@ -383,11 +365,7 @@ class Form implements Renderable
     {
         foreach ($this->fields as $field) {
             if (is_array($field->column())) {
-                $result = in_array($name, $field->column(), true) || $field->column() === $name ? $field : null;
-
-                if ($result) {
-                    return $result;
-                }
+                return in_array($name, $field->column(), true) ? $field : null;
             }
 
             if ($field === $name || $field->column() === $name) {
@@ -402,6 +380,31 @@ class Form implements Renderable
     public function fields()
     {
         return $this->fields;
+    }
+
+    /**
+     * @param int|float $width
+     * @param Closure   $callback
+     *
+     * @return $this
+     */
+    public function column($width, \Closure $callback)
+    {
+        $this->layout()->onlyColumn($width, function () use ($callback) {
+            $callback($this);
+        });
+
+        $this->hasColumns = true;
+
+        return $this;
+    }
+
+    /**
+     * @return Layout
+     */
+    public function layout()
+    {
+        return $this->layout ?: ($this->layout = new Layout($this));
     }
 
     /**
@@ -449,33 +452,26 @@ class Form implements Renderable
         return $messageBag;
     }
 
-    public function useFormTag(bool $tag = true)
+    /**
+     * Disable Pjax.
+     *
+     * @return $this
+     */
+    public function disablePjax()
     {
-        $this->useFormTag = $tag;
+        $this->forgetHtmlAttribute('pjax-container');
 
         return $this;
     }
 
     /**
-     * @param bool $value
+     * Disable form tag.
      *
-     * @return $this
+     * @return $this;
      */
-    public function submitButton(bool $value = true)
+    public function disableFormTag()
     {
-        $this->buttons['submit'] = $value;
-
-        return $this;
-    }
-
-    /**
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function resetButton(bool $value = true)
-    {
-        $this->buttons['reset'] = $value;
+        $this->useFormTag = false;
 
         return $this;
     }
@@ -483,25 +479,25 @@ class Form implements Renderable
     /**
      * Disable reset button.
      *
-     * @param bool $value
-     *
      * @return $this
      */
-    public function disableResetButton(bool $value = true)
+    public function disableResetButton()
     {
-        return $this->resetButton(! $value);
+        $this->buttons['reset'] = false;
+
+        return $this;
     }
 
     /**
      * Disable submit button.
      *
-     * @param bool $value
-     *
      * @return $this
      */
-    public function disableSubmitButton(bool $value = true)
+    public function disableSubmitButton()
     {
-        return $this->submitButton(! $value);
+        $this->buttons['submit'] = false;
+
+        return $this;
     }
 
     /**
@@ -555,8 +551,8 @@ class Form implements Renderable
     public function pushField(Field $field)
     {
         $this->fields->push($field);
-        if ($this->layout()->hasColumns()) {
-            $this->layout()->addField($field);
+        if ($this->layout) {
+            $this->layout->addField($field);
         }
 
         $field->setForm($this);
@@ -564,7 +560,7 @@ class Form implements Renderable
 
         $this->setFileUploadUrl($field);
 
-        $field::requireAssets();
+        $field::collectAssets();
 
         return $this;
     }
@@ -574,8 +570,8 @@ class Form implements Renderable
         if ($field instanceof Field\File && method_exists($this, 'form')) {
             $formData = [static::REQUEST_NAME => get_called_class()];
 
-            $field->url(route(admin_api_route_name('form.upload')));
-            $field->deleteUrl(route(admin_api_route_name('form.destroy-file'), $formData));
+            $field->url(route(admin_api_route('form.upload')));
+            $field->deleteUrl(route(admin_api_route('form.destroy-file'), $formData));
             $field->withFormData($formData);
         }
     }
@@ -592,70 +588,16 @@ class Form implements Renderable
         $this->fillFields($this->model()->toArray());
 
         return array_merge([
-            'start'     => $this->open(),
-            'end'       => $this->close(),
-            'fields'    => $this->fields,
-            'method'    => $this->getHtmlAttribute('method'),
-            'rows'      => $this->rows(),
-            'layout'    => $this->layout(),
-            'elementId' => $this->getElementId(),
-            'ajax'      => $this->ajax,
-            'footer'    => $this->renderFooter(),
+            'start'   => $this->open(),
+            'end'     => $this->close(),
+            'fields'  => $this->fields,
+            'method'  => $this->getHtmlAttribute('method'),
+            'buttons' => $this->buttons,
+            'rows'    => $this->rows(),
+            'layout'  => $this->layout,
         ], $this->variables);
     }
 
-    /**
-     * 表单底部内容.
-     *
-     * @return string
-     */
-    protected function renderFooter()
-    {
-        if (empty($this->buttons['reset']) && empty($this->buttons['submit'])) {
-            return;
-        }
-
-        return <<<HTML
-<div class="box-footer row d-flex">
-    <div class="col-md-2"> &nbsp;</div>
-    <div class="col-md-8">{$this->renderResetButton()}{$this->renderSubmitButton()}</div>
-</div>
-HTML;
-    }
-
-    protected function renderResetButton()
-    {
-        if (! empty($this->buttons['reset'])) {
-            $reset = trans('admin.reset');
-
-            return "<button type=\"reset\" class=\"btn btn-white pull-left\"><i class=\"feather icon-rotate-ccw\"></i> {$reset}</button>";
-        }
-    }
-
-    protected function renderSubmitButton()
-    {
-        if (! empty($this->buttons['submit'])) {
-            return "<button type=\"submit\" class=\"btn btn-primary pull-right\"><i class=\"feather icon-save\"></i> {$this->getSubmitButtonLabel()}</button>";
-        }
-    }
-
-    /**
-     * 提交按钮文本.
-     *
-     * @return string
-     */
-    protected function getSubmitButtonLabel()
-    {
-        return trans('admin.submit');
-    }
-
-    /**
-     * 设置视图变量.
-     *
-     * @param array $variables
-     *
-     * @return $this
-     */
     public function addVariables(array $variables)
     {
         $this->variables = array_merge($this->variables, $variables);
@@ -666,9 +608,7 @@ HTML;
     public function fillFields(array $data)
     {
         foreach ($this->fields as $field) {
-            if (! $field->hasAttribute(Field::BUILD_IGNORE)) {
-                $field->fill($data);
-            }
+            $field->fill($data);
         }
     }
 
@@ -677,10 +617,6 @@ HTML;
      */
     protected function open()
     {
-        if (! $this->useFormTag) {
-            return;
-        }
-
         return <<<HTML
 <form {$this->formatHtmlAttributes()}>
 HTML;
@@ -691,10 +627,6 @@ HTML;
      */
     protected function close()
     {
-        if (! $this->useFormTag) {
-            return;
-        }
-
         return '</form>';
     }
 
@@ -747,13 +679,15 @@ HTML;
     }
 
     /**
+     * Disable submit with ajax.
+     *
      * @param bool $disable
      *
      * @return $this
      */
-    public function ajax(bool $value = true)
+    public function disableAjaxSubmit(bool $disable = true)
     {
-        $this->ajax = $value;
+        $this->useAjaxSubmit = ! $disable;
 
         return $this;
     }
@@ -763,20 +697,63 @@ HTML;
      */
     public function allowAjaxSubmit()
     {
-        return $this->ajax === true;
+        return $this->useAjaxSubmit === true;
+    }
+
+    /**
+     * @return void
+     */
+    protected function setUpSubmitScript()
+    {
+        $confirm = json_encode($this->confirm);
+
+        Admin::script(
+            <<<JS
+$('#{$this->getElementId()}').form({
+    validate: true,
+    confirm: {$confirm},
+    success: function (data) {
+        {$this->buildSuccessScript()}
+        {$this->addSavedScript()}
+    },
+    error: function (response) {
+        {$this->buildErrorScript()}
+        {$this->addErrorScript()}
+    }
+});
+JS
+        );
     }
 
     /**
      * @return string|void
+     *
+     * @deprecated 将在2.0版本中废弃，请用 addSavedScript 代替
      */
-    protected function savedScript()
+    protected function buildSuccessScript()
     {
     }
 
     /**
      * @return string|void
      */
-    protected function errorScript()
+    protected function addSavedScript()
+    {
+    }
+
+    /**
+     * @return string|void
+     *
+     * @deprecated 将在2.0版本中废弃，请用 addErrorScript 代替
+     */
+    protected function buildErrorScript()
+    {
+    }
+
+    /**
+     * @return string|void
+     */
+    protected function addErrorScript()
     {
     }
 
@@ -819,6 +796,10 @@ HTML;
 
     protected function prepareForm()
     {
+        if (method_exists($this, 'form')) {
+            $this->form();
+        }
+
         if (! $this->data && method_exists($this, 'default')) {
             $data = $this->default();
 
@@ -826,18 +807,14 @@ HTML;
                 $this->fill($data);
             }
         }
-
-        if (method_exists($this, 'form')) {
-            $this->form();
-        }
     }
 
     protected function prepareHandler()
     {
-        if ($this->allowAjaxSubmit() && method_exists($this, 'handle')) {
+        if (method_exists($this, 'handle')) {
             $addHiddenFields = function () {
                 $this->method('POST');
-                $this->action(route(admin_api_route_name('form')));
+                $this->action(route(admin_api_route('form')));
                 $this->hidden(static::REQUEST_NAME)->default(get_called_class());
                 $this->hidden(static::CURRENT_URL_NAME)->default($this->getCurrentUrl());
 
@@ -846,7 +823,7 @@ HTML;
                 }
             };
 
-            $this->layout()->hasColumns() ? $this->column(1, $addHiddenFields) : $addHiddenFields();
+            $this->hasColumns ? $this->column(1, $addHiddenFields) : $addHiddenFields();
         }
     }
 
@@ -862,7 +839,7 @@ HTML;
         $this->prepareHandler();
 
         if ($this->allowAjaxSubmit()) {
-            $this->addAjaxScript();
+            $this->setUpSubmitScript();
         }
 
         $tabObj = $this->getTab();
@@ -871,33 +848,9 @@ HTML;
             $tabObj->addScript();
         }
 
-        $this->addVariables([
-            'tabObj' => $tabObj,
-        ]);
+        $this->addVariables(['tabObj' => $tabObj]);
 
         return view($this->view, $this->variables())->render();
-    }
-
-    protected function addAjaxScript()
-    {
-        $confirm = admin_javascript_json($this->confirm);
-        $toastr = $this->validationErrorToastr ? 'true' : 'false';
-
-        Admin::script(
-            <<<JS
-$('#{$this->getElementId()}').form({
-    validate: true,
-    confirm: {$confirm},
-    validationErrorToastr: $toastr,
-    success: function (data) {
-        {$this->savedScript()}
-    },
-    error: function (response) {
-        {$this->errorScript()}
-    }
-});
-JS
-        );
     }
 
     /**
@@ -924,7 +877,7 @@ JS
             return $this->macroCall($method, $arguments);
         }
 
-        throw new RuntimeException("Field [{$method}] does not exist.");
+        throw new \BadMethodCallException("Field [{$method}] does not exist.");
     }
 
     /**

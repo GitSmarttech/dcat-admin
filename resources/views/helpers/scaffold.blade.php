@@ -112,7 +112,7 @@
                     <th>{{trans('admin.action')}}</th>
                 </tr>
                 </thead>
-                <tbody id="table-fields-sortable">
+                <tbody>
                 @if(old('fields'))
                     @foreach(old('fields') as $index => $field)
                         <tr>
@@ -149,10 +149,7 @@
                             </td>
                             <td><input type="text" class="form-control" placeholder="{{trans('admin.scaffold.default')}}" name="fields[{{$index}}][default]" value="{{$field['default']}}"/></td>
                             <td><input type="text" class="form-control" placeholder="{{trans('admin.scaffold.comment')}}" name="fields[{{$index}}][comment]" value="{{$field['comment']}}" /></td>
-                            <td>
-                                <button class="btn btn-sm btn-white table-field-sort-handle" type="button" title="{{trans('admin.order')}}"><i class="fa fa-sort"></i></button>
-                                <button class="btn btn-sm btn-white table-field-remove"><i class="feather icon-trash"></i></button>
-                            </td>
+                            <td><button class="btn btn-sm btn-danger table-field-remove"><i class="feather icon-trash"></i></button></td>
                         </tr>
                     @endforeach
                 @else
@@ -189,10 +186,7 @@
                         </td>
                         <td><input type="text" class="form-control" placeholder="{{trans('admin.scaffold.default')}}" name="fields[0][default]"></td>
                         <td><input type="text" class="form-control" placeholder="{{trans('admin.scaffold.comment')}}" name="fields[0][comment]"></td>
-                        <td>
-                            <button class="btn btn-sm btn-white table-field-sort-handle" type="button" title="{{trans('admin.order')}}"><i class="fa fa-sort"></i></button>
-                            <button class="btn btn-sm btn-white table-field-remove"><i class="feather icon-trash"></i></button>
-                        </td>
+                        <td><button class="btn btn-sm btn-danger table-field-remove"><i class="feather icon-trash"></i></button></td>
                     </tr>
                 @endif
                 </tbody>
@@ -203,32 +197,13 @@
             <div class='form-inline d-flex justify-content-between' style="width: 100%; padding: 0 20px 12px;">
 
                 <div class='form-group'>
-                    <button type="button" class="btn btn-sm btn-primary btn-outline text-capitalize" id="add-table-field"><i class="feather icon-plus"></i>&nbsp;&nbsp;{{(trans('admin.scaffold.add_field'))}}</button>
-                    <button type="button" class="btn btn-sm btn-primary btn-outline text-capitalize ml-1" id="sync-translation-with-comment"><i class="feather icon-repeat"></i>&nbsp;&nbsp;{{(trans('admin.scaffold.sync_translation_with_comment'))}}</button>
+                    <button type="button" class="btn btn-sm btn-success text-capitalize" id="add-table-field"><i class="feather icon-plus"></i>&nbsp;&nbsp;{{(trans('admin.scaffold.add_field'))}}</button>
                 </div>
 
                 <div class="row">
                     <div class="form-group text-capitalize" style="margin-right: 20px;">
-                        <span for="titleTranslation">{{(trans('admin.scaffold.translate_title'))}}&nbsp;&nbsp;</span>
-                        <input type="text"
-                               name="translate_title"
-                               class="form-control"
-                               id="titleTranslation"
-                               placeholder="{{(trans('admin.scaffold.translate_title'))}}"
-                               value="{{ request('translate_title') }}"
-                               style="width: 150px;">
-                    </div>
-
-                    <div class="form-group text-capitalize" style="margin-right: 20px;">
                         <span for="inputPrimaryKey">{{(trans('admin.scaffold.pk'))}}&nbsp;&nbsp;</span>
-                        <input
-                                type="text"
-                                name="primary_key"
-                                class="form-control"
-                                id="inputPrimaryKey"
-                                placeholder="{{(trans('admin.scaffold.pk'))}}"
-                                value="{{ request('primary_key') ?: 'id' }}"
-                                style="width: 100px;">
+                        <input type="text" name="primary_key" class="form-control" id="inputPrimaryKey" placeholder="{{(trans('admin.scaffold.pk'))}}" value="id" style="width: 100px;">
                     </div>
 
                     <div class='form-group text-capitalize'>
@@ -286,10 +261,7 @@
         </td>
         <td><input value="{default}" type="text" class="form-control" placeholder="{{trans('admin.scaffold.default')}}" name="fields[__index__][default]"></td>
         <td><input value="{comment}" type="text" class="form-control" placeholder="{{trans('admin.scaffold.comment')}}" name="fields[__index__][comment]"></td>
-        <td>
-            <button class="btn btn-sm btn-white table-field-sort-handle" type="button" title="{{trans('admin.order')}}"><i class="fa fa-sort"></i></button>
-            <button class="btn btn-sm btn-white table-field-remove"><i class="feather icon-trash"></i></button>
-        </td>
+        <td><button class="btn btn-sm btn-danger table-field-remove"><i class="feather icon-trash"></i></button></td>
     </tr>
 </template>
 
@@ -319,36 +291,8 @@
 
         $('select').select2();
 
-        var sortable = Sortable.create(document.getElementById("table-fields-sortable"),{
-            handle:'.table-field-sort-handle',
-            onEnd: function () {
-                getTR().each(function(index){
-                    $(this).find("[name^='fields']").each(function(){
-                        var newName = $(this).attr('name').replace(/fields\[(\d)\]/, `fields[${index}]`);
-                        $(this).attr('name', newName);
-                    })
-                });
-            }
-        });
-
         $('#add-table-field').click(function (event) {
             addField();
-        });
-
-        $('#sync-translation-with-comment').click(function (event) {
-            var element = $('#table-fields-sortable tr');
-            if (element.length > 0) {
-                element.each(function (i, v) {
-                    var translation = $(v).find('input[name="fields[' + i + '][translation]"]');
-                    var comment = $(v).find('input[name="fields[' + i + '][comment]"]');
-                    if (translation.val() !== "" && comment.val() === "") {
-                        comment.val(translation.val());
-                    }
-                    if (translation.val() === "" && comment.val() !== "") {
-                        translation.val(comment.val());
-                    }
-                });
-            }
         });
 
         $('#table-fields').on('click', '.table-field-remove', function(event) {
@@ -385,48 +329,44 @@
 
             withSingularName(tb);
 
-            $.post({
-                url: '{{ admin_url('helpers/scaffold/table') }}',
-                data: {db: db, tb: tb},
-                success: function (res) {
-                    Dcat.loading(false);
+            $.post('{{ admin_url('helpers/scaffold/table') }}', {db: db, tb: tb}, function (res) {
+                Dcat.loading(false);
 
-                    if (!res.list) return;
-                    var i, list = res.list, $id = $('#inputPrimaryKey'), updated, created, soft;
+                if (!res.list) return;
+                var i, list = res.list, $id = $('#inputPrimaryKey'), updated, created, soft;
 
-                    getTR().remove();
-                    for (i in list) {
-                        if (list[i].id) {
-                            $id.val(i);
-                            continue;
-                        }
-                        if (i == 'updated_at') {
-                            updated = list[i];
-                            continue;
-                        }
-                        if (i == 'created_at') {
-                            created = list[i];
-                            continue;
-                        }
-                        if (i == 'deleted_at') {
-                            soft = list[i];
-                            continue;
-                        }
-
-                        var c = helpers.replace(list[i].comment, '"', '');
-                        addField({
-                            name: i,
-                            lang: c,
-                            type: list[i].type,
-                            default: helpers.replace(list[i].default, '"', ''),
-                            comment: c,
-                            nullable: list[i].nullable != 'NO',
-                        });
+                getTR().remove();
+                for (i in list) {
+                    if (list[i].id) {
+                        $id.val(i);
+                        continue;
+                    }
+                    if (i == 'updated_at') {
+                        updated = list[i];
+                        continue;
+                    }
+                    if (i == 'created_at') {
+                        created = list[i];
+                        continue;
+                    }
+                    if (i == 'deleted_at') {
+                        soft = list[i];
+                        continue;
                     }
 
-                    addTimestamps(updated, created);
-                    addSoftdelete(soft);
+                    var c = helpers.replace(list[i].comment, '"', '');
+                    addField({
+                        name: i,
+                        lang: c,
+                        type: list[i].type,
+                        default: helpers.replace(list[i].default, '"', ''),
+                        comment: c,
+                        nullable: list[i].nullable != 'NO',
+                    });
                 }
+
+                addTimestamps(updated, created);
+                addSoftdelete(soft);
             });
 
         });

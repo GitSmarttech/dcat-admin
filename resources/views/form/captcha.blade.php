@@ -1,6 +1,6 @@
-<div class="{{$viewClass['form-group']}}">
+<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
 
-    <label class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
+    <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
 
     <div class="{{$viewClass['field']}}">
 
@@ -19,9 +19,3 @@
 
     </div>
 </div>
-
-<script init=".field-refresh-captcha" once>
-    $this.off('click').on('click', function () {
-        $(this).attr('src', $(this).attr('data-url')+'?'+Math.random());
-    });
-</script>

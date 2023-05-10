@@ -24,7 +24,13 @@ class Chart extends Widget
 
     protected $containerSelector;
 
+    protected $options = [];
+
     protected $built = false;
+
+    protected $scripts = [
+        'extend' => 'return options',
+    ];
 
     public function __construct($selector = null, $options = [])
     {
@@ -198,6 +204,18 @@ class Chart extends Widget
         }
 
         $this->options['dataLabels'] = Helper::array($value);
+
+        return $this;
+    }
+
+    /**
+     * @param string|\Closure $script
+     *
+     * @return $this
+     */
+    public function extendOptions($script)
+    {
+        $this->scripts['extend'] = value($script);
 
         return $this;
     }

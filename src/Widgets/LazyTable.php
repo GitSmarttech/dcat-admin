@@ -31,11 +31,6 @@ class LazyTable extends Widget
     protected $simple;
 
     /**
-     * @var string
-     */
-    protected $loadScript = '';
-
-    /**
      * LazyTable constructor.
      *
      * @param LazyRenderable $renderable
@@ -46,9 +41,8 @@ class LazyTable extends Widget
         $this->from($renderable);
         $this->load($load);
 
-        $this->elementClass = 'async-table-'.Str::random(10);
-
-        $this->class(['async-table']);
+        $this->class('async-table');
+        $this->id('async-table-'.Str::random(8));
     }
 
     /**
@@ -67,14 +61,6 @@ class LazyTable extends Widget
         $this->renderable = $renderable;
 
         return $this;
-    }
-
-    /**
-     * @return LazyRenderable
-     */
-    public function getRenderable()
-    {
-        return $this->renderable;
     }
 
     /**
@@ -114,35 +100,28 @@ class LazyTable extends Widget
      */
     public function onLoad(string $script)
     {
-        $this->loadScript .= "\$this.on('table:loaded', function (event) { {$script} });";
+        $this->script .= "$('{$this->getElementSelector()}').on('table:loaded', function (event) { {$script} });";
 
         return $this;
     }
 
     protected function addScript()
     {
+        $loader = $this->load ? $this->getLoadScript() : '';
+
         $this->script = <<<JS
-Dcat.init('{$this->getElementSelector()}', function (\$this) {
-    Dcat.grid.AsyncTable({container: \$this})
-
-    {$this->loadScript}
-
-    {$this->getLoadScript()}
-});
+Dcat.grid.AsyncTable({container: '{$this->getElementSelector()}'});
+{$loader}
 JS;
     }
 
     /**
      * @return string
      */
-    protected function getLoadScript()
+    public function getLoadScript()
     {
-        if (! $this->load) {
-            return;
-        }
-
-        return <<<'JS'
-$this.trigger('table:load');
+        return <<<JS
+$('{$this->getElementSelector()}').trigger('table:load');
 JS;
     }
 

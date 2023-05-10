@@ -2,19 +2,79 @@
 
 namespace Dcat\Admin\Form;
 
+use Dcat\Admin\Admin;
 use Dcat\Admin\Form;
-use Dcat\Admin\Support\Helper;
+use Dcat\Admin\Form\Field\MultipleSelectTable;
+use Dcat\Admin\Form\Field\SelectTable;
 use Dcat\Admin\Widgets\Form as WidgetForm;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 
-class NestedForm extends WidgetForm
+/**
+ * Class Form.
+ *
+ * @method Field\Text                   text($column, $label = '')
+ * @method Field\Checkbox               checkbox($column, $label = '')
+ * @method Field\Radio                  radio($column, $label = '')
+ * @method Field\Select                 select($column, $label = '')
+ * @method Field\MultipleSelect         multipleSelect($column, $label = '')
+ * @method Field\Textarea               textarea($column, $label = '')
+ * @method Field\Hidden                 hidden($column, $label = '')
+ * @method Field\Id                     id($column, $label = '')
+ * @method Field\Ip                     ip($column, $label = '')
+ * @method Field\Url                    url($column, $label = '')
+ * @method Field\Email                  email($column, $label = '')
+ * @method Field\Mobile                 mobile($column, $label = '')
+ * @method Field\Slider                 slider($column, $label = '')
+ * @method Field\Map                    map($latitude, $longitude, $label = '')
+ * @method Field\Editor                 editor($column, $label = '')
+ * @method Field\Date                   date($column, $label = '')
+ * @method Field\Datetime               datetime($column, $label = '')
+ * @method Field\Time                   time($column, $label = '')
+ * @method Field\Year                   year($column, $label = '')
+ * @method Field\Month                  month($column, $label = '')
+ * @method Field\DateRange              dateRange($start, $end, $label = '')
+ * @method Field\DateTimeRange          datetimeRange($start, $end, $label = '')
+ * @method Field\TimeRange              timeRange($start, $end, $label = '')
+ * @method Field\Number                 number($column, $label = '')
+ * @method Field\Currency               currency($column, $label = '')
+ * @method Field\SwitchField            switch($column, $label = '')
+ * @method Field\Display                display($column, $label = '')
+ * @method Field\Rate                   rate($column, $label = '')
+ * @method Field\Divide                 divider()
+ * @method Field\Password               password($column, $label = '')
+ * @method Field\Decimal                decimal($column, $label = '')
+ * @method Field\Html                   html($html, $label = '')
+ * @method Field\Tags                   tags($column, $label = '')
+ * @method Field\Icon                   icon($column, $label = '')
+ * @method Field\Embeds                 embeds($column, $label = '')
+ * @method Field\Captcha                captcha()
+ * @method Field\Listbox                listbox($column, $label = '')
+ * @method Field\SelectResource         selectResource($column, $label = '')
+ * @method Field\File                   file($column, $label = '')
+ * @method Field\Image                  image($column, $label = '')
+ * @method Field\MultipleFile           multipleFile($column, $label = '')
+ * @method Field\MultipleImage          multipleImage($column, $label = '')
+ * @method Field\HasMany                hasMany($column, $labelOrCallback, $callback = null)
+ * @method Field\Tree                   tree($column, $label = '')
+ * @method Field\Table                  table($column, $labelOrCallback, $callback = null)
+ * @method Field\ListField              list($column, $label = '')
+ * @method Field\Timezone               timezone($column, $label = '')
+ * @method Field\KeyValue               keyValue($column, $label = '')
+ * @method Field\Tel                    tel($column, $label = '')
+ * @method Field\Markdown               markdown($column, $label = '')
+ * @method Field\Range                  range($start, $end, $label = '')
+ * @method Field\Color                  color($column, $label = '')
+ * @method Field\SelectTable            selectTable($column, $label = '')
+ * @method Field\MultipleSelectTable    multipleSelectTable($column, $label = '')
+ */
+class NestedForm
 {
     const DEFAULT_KEY_NAME = '__LA_KEY__';
 
     const REMOVE_FLAG_NAME = '_remove_';
 
-    const REMOVE_FLAG_CLASS = 'form-removed';
+    const REMOVE_FLAG_CLASS = 'fom-removed';
 
     /**
      * @var string
@@ -55,18 +115,13 @@ class NestedForm extends WidgetForm
      * @param string $relation
      * @param null   $key
      */
-    public function __construct($relation = null, $key = null)
+    public function __construct($relation, $key = null)
     {
-        parent::__construct();
-
         $this->relationName = $relation;
 
         $this->key = $key;
 
-        $this->resetButton(false);
-        $this->submitButton(false);
-        $this->ajax(false);
-        $this->useFormTag(false);
+        $this->fields = new Collection();
     }
 
     /**
@@ -88,14 +143,9 @@ class NestedForm extends WidgetForm
      *
      * @return Form
      */
-    public function form()
+    public function getForm()
     {
         return $this->form;
-    }
-
-    public function model()
-    {
-        return $this->form->model();
     }
 
     /**
@@ -149,14 +199,6 @@ class NestedForm extends WidgetForm
     }
 
     /**
-     * @return mixed
-     */
-    public function getParentKey()
-    {
-        return $this->form->getKey();
-    }
-
-    /**
      * Get key for current form.
      *
      * @return string
@@ -190,7 +232,7 @@ class NestedForm extends WidgetForm
     protected function setFieldOriginalValue($key)
     {
         $values = [];
-        if (Helper::keyExists($key, $this->original)) {
+        if (array_key_exists($key, $this->original)) {
             $values = $this->original[$key];
         }
         $this->fields->each(function (Field $field) use ($values) {
@@ -227,7 +269,7 @@ class NestedForm extends WidgetForm
                 $value = $field->prepare($value);
             }
 
-            if (($field instanceof Form\Field\Hidden) || ! Helper::equal($field->original(), $value)) {
+            if (($field instanceof Form\Field\Hidden) || $value != $field->original()) {
                 if (is_array($columns)) {
                     foreach ($columns as $name => $column) {
                         Arr::set($prepared, $column, $value[$name]);
@@ -277,47 +319,24 @@ class NestedForm extends WidgetForm
     }
 
     /**
-     * {@inheritDoc}
+     * @param Field $field
+     *
+     * @return $this
      */
     public function pushField(Field $field)
     {
         $this->fields->push($field);
 
-        $field->setForm($this->form);
-        $field->setParent($this);
-
-        if ($this->layout()->hasColumns()) {
-            $this->layout()->addField($field);
+        if (method_exists($this->form, 'builder')) {
+            $this->form->builder()->fields()->push($field);
+            $field->attribute(Builder::BUILD_IGNORE, true);
         }
 
-        $field->attribute(Field::BUILD_IGNORE, true);
+        $field->setNestedFormRelation($this->relationName, $this->key);
 
-        if ($this->form && method_exists($this->form, 'builder')) {
-            $this->form->builder()->pushField((clone $field)->display(false));
-        }
-
-        $field->setRelation([
-            'relation' => $this->relationName,
-            'key'      => $this->key,
-        ]);
-
-        $field::requireAssets();
-
-        $field->width($this->width['field'], $this->width['label']);
+        $field::collectAssets();
 
         return $this;
-    }
-
-    protected function resolveField($method, $arguments)
-    {
-        if ($className = Form::findFieldClass($method)) {
-            $column = Arr::get($arguments, 0, '');
-
-            /* @var Field $field */
-            $field = new $className($column, array_slice($arguments, 1));
-
-            return $this->formatField($field);
-        }
     }
 
     /**
@@ -337,7 +356,7 @@ class NestedForm extends WidgetForm
      *
      * @return $this
      */
-    public function fill($data)
+    public function fill(array $data)
     {
         /* @var Field $field */
         foreach ($this->fields() as $field) {
@@ -345,6 +364,33 @@ class NestedForm extends WidgetForm
         }
 
         return $this;
+    }
+
+    /**
+     * Get the html and script of template.
+     *
+     * @return array
+     */
+    public function getTemplateHtmlAndScript()
+    {
+        $html = '';
+        $scripts = [];
+
+        /* @var Field $field */
+        foreach ($this->fields() as $field) {
+
+            //when field render, will push $script to Admin
+            $html .= $field->render();
+
+            /*
+             * Get and remove the last script of Admin::$script stack.
+             */
+            if ($field->getScript()) {
+                $scripts[] = array_pop(Admin::asset()->script);
+            }
+        }
+
+        return [$html, implode(";\r\n", $scripts)];
     }
 
     /**
@@ -365,30 +411,18 @@ class NestedForm extends WidgetForm
         if (is_array($column)) {
             foreach ($column as $k => $name) {
                 $errorKey[$k] = sprintf('%s.%s.%s', $this->relationName, $key, $name);
-                $elementName[$k] = sprintf('%s[%s][%s]', $this->formatName(), $key, $name);
-                $elementClass[$k] = [$this->formatClass(), $this->formatClass($name), $this->formatClass($name, false)];
+                $elementName[$k] = sprintf('%s[%s][%s]', $this->relationName, $key, $name);
+                $elementClass[$k] = [$this->relationName, Field::FIELD_CLASS_PREFIX.$name];
             }
         } else {
             $errorKey = sprintf('%s.%s.%s', $this->relationName, $key, $column);
-            $elementName = sprintf('%s[%s][%s]', $this->formatName(), $key, $column);
-            $elementClass = [$this->formatClass(), $this->formatClass($column), $this->formatClass($column, false)];
+            $elementName = sprintf('%s[%s][%s]', $this->relationName, $key, $column);
+            $elementClass = [$this->relationName, Field::FIELD_CLASS_PREFIX.$column];
         }
 
         return $field->setErrorKey($errorKey)
             ->setElementName($elementName)
             ->setElementClass($elementClass);
-    }
-
-    protected function formatClass($name = null, bool $append = true)
-    {
-        $class = str_replace('.', '_', $name ?: $this->relationName);
-
-        return $append ? ($class.'_'.$this->key) : $class;
-    }
-
-    protected function formatName($name = null)
-    {
-        return Helper::formatElementName($name ?: $this->relationName);
     }
 
     /**
@@ -401,7 +435,16 @@ class NestedForm extends WidgetForm
      */
     public function __call($method, $arguments)
     {
-        if ($field = $this->resolveField($method, $arguments)) {
+        if ($className = Form::findFieldClass($method)) {
+            $column = Arr::get($arguments, 0, '');
+
+            /* @var Field $field */
+            $field = new $className($column, array_slice($arguments, 1));
+
+            $field->setForm($this->form);
+
+            $field = $this->formatField($field);
+
             $this->pushField($field);
 
             return $field;

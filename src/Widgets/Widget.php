@@ -8,20 +8,18 @@ use Dcat\Admin\Grid\LazyRenderable as LazyGrid;
 use Dcat\Admin\Layout\Content;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasHtmlAttributes;
-use Dcat\Admin\Traits\HasVariables;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Arr;
 
 /**
- * @method $this class(array|string $class, bool $append = false)
+ * @method $this class(string $class, bool $append = false)
  * @method $this style(string $style, bool $append = true)
  * @method $this id(string $id = null)
  */
 abstract class Widget implements Renderable
 {
     use HasHtmlAttributes;
-    use HasVariables;
 
     /**
      * @var array
@@ -46,12 +44,12 @@ abstract class Widget implements Renderable
     /**
      * @var array
      */
-    protected $options = [];
+    protected $variables = [];
 
     /**
-     * @var string
+     * @var array
      */
-    protected $elementClass;
+    protected $options = [];
 
     /**
      * @var bool
@@ -66,23 +64,6 @@ abstract class Widget implements Renderable
     public static function make(...$params)
     {
         return new static(...$params);
-    }
-
-    /**
-     * 符合条件则执行.
-     *
-     * @param  mixed  $value
-     * @param  callable  $callback
-     *
-     * @return $this|mixed
-     */
-    public function when($value, $callback)
-    {
-        if ($value) {
-            return $callback($this, $value) ?: $this;
-        }
-
-        return $this;
     }
 
     /**
@@ -115,9 +96,9 @@ abstract class Widget implements Renderable
     {
         if ($value === null) {
             return Arr::get($this->options, $key);
+        } else {
+            Arr::set($this->options, $key, $value);
         }
-
-        Arr::set($this->options, $key, $value);
 
         return $this;
     }
@@ -137,20 +118,37 @@ abstract class Widget implements Renderable
      *
      * @return array
      */
-    public function defaultVariables()
+    public function variables()
     {
-        return [
+        return array_merge($this->variables, [
             'attributes' => $this->formatHtmlAttributes(),
             'options'    => $this->options,
-            'class'      => $this->getElementClass(),
-            'selector'   => $this->getElementSelector(),
-        ];
+        ]);
+    }
+
+    /**
+     * 设置视图变量.
+     *
+     * @param string|array $key
+     * @param mixed        $value
+     *
+     * @return $this
+     */
+    public function with($key, $value = null)
+    {
+        if (is_array($key)) {
+            $this->variables = array_merge($this->variables, $key);
+        } else {
+            $this->variables[$key] = $value;
+        }
+
+        return $this;
     }
 
     /**
      * 收集静态资源.
      */
-    public static function requireAssets()
+    public static function collectAssets()
     {
         static::$js && Admin::js(static::$js);
         static::$css && Admin::css(static::$css);
@@ -181,9 +179,7 @@ abstract class Widget implements Renderable
      */
     public function render()
     {
-        static::requireAssets();
-
-        $this->class($this->getElementClass(), true);
+        static::collectAssets();
 
         $html = $this->html();
 
@@ -199,27 +195,7 @@ abstract class Widget implements Renderable
      */
     public function getElementSelector()
     {
-        return '.'.$this->getElementClass();
-    }
-
-    /**
-     * @param string $elementClass
-     *
-     * @return $this
-     */
-    public function setElementClass(string $elementClass)
-    {
-        $this->elementClass = $elementClass;
-
-        return $this;
-    }
-
-    /**
-     * @return mixed
-     */
-    public function getElementClass()
-    {
-        return $this->elementClass ?: str_replace('\\', '_', static::class);
+        return '#'.$this->id();
     }
 
     /**
@@ -233,11 +209,7 @@ abstract class Widget implements Renderable
             return;
         }
 
-        $result = Admin::resolveHtml(view($this->view, $this->variables()), ['runScript' => $this->runScript]);
-
-        $this->script .= $result['script'];
-
-        return $result['html'];
+        return view($this->view, $this->variables())->render();
     }
 
     /**
@@ -291,7 +263,7 @@ abstract class Widget implements Renderable
      *
      * @return Lazy|LazyTable|mixed
      */
-    protected function formatRenderable($content)
+    protected function lazyRenderable($content)
     {
         if ($content instanceof LazyGrid) {
             return LazyTable::make($content);
@@ -315,10 +287,6 @@ abstract class Widget implements Renderable
         if ($method === 'style' || $method === 'class') {
             $value = $parameters[0] ?? null;
             $append = $parameters[1] ?? ($method === 'class' ? false : true);
-
-            if (is_array($value)) {
-                $value = implode(' ', $value);
-            }
 
             if ($append) {
                 $original = $this->htmlAttributes[$method] ?? '';

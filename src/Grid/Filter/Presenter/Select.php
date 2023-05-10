@@ -2,14 +2,21 @@
 
 namespace Dcat\Admin\Grid\Filter\Presenter;
 
-use Dcat\Admin\Exception\RuntimeException;
-use Dcat\Admin\Support\Helper;
+use Dcat\Admin\Admin;
+use Dcat\Admin\Form\Field\Select as SelectForm;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
 class Select extends Presenter
 {
+    public static $js = [
+        '@select2',
+    ];
+    public static $css = [
+        '@select2',
+    ];
+
     /**
      * @var string
      */
@@ -50,6 +57,8 @@ class Select extends Presenter
     public function __construct($options)
     {
         $this->options = $options;
+
+        SelectForm::defineLang();
     }
 
     /**
@@ -57,18 +66,14 @@ class Select extends Presenter
      *
      * all configurations see https://select2.org/configuration/options-api
      *
-     * @param string|array $key
+     * @param string $key
      * @param mixed  $val
      *
      * @return $this
      */
-    public function config($key, $val = null)
+    public function config($key, $val)
     {
-        if (is_array($key)) {
-            $this->config = array_merge($this->config, $key);
-        } else {
-            $this->config[$key] = $val;
-        }
+        $this->config[$key] = $val;
 
         return $this;
     }
@@ -102,13 +107,23 @@ class Select extends Presenter
             $this->options = $this->options->toArray();
         }
 
-        $this->addDefaultConfig([
-            'allowClear'  => true,
-            'placeholder' => [
-                'id'   => '',
-                'text' => $this->placeholder(),
-            ],
-        ]);
+        if (empty($this->script)) {
+            $configs = array_merge([
+                'allowClear'  => true,
+                'placeholder' => [
+                    'id'   => '',
+                    'text' => $this->placeholder(),
+                ],
+            ], $this->config);
+
+            $configs = json_encode($configs);
+
+            $this->script = <<<JS
+$(".{$this->getElementClass()}").select2($configs);
+JS;
+        }
+
+        Admin::script($this->script);
 
         return is_array($this->options) ? $this->options : [];
     }
@@ -127,7 +142,7 @@ class Select extends Presenter
         if (! class_exists($model)
             || ! in_array(Model::class, class_parents($model))
         ) {
-            throw new RuntimeException("[$model] must be a valid model class");
+            throw new \InvalidArgumentException("[$model] must be a valid model class");
         }
 
         $this->options = function ($value) use ($model, $idField, $textField) {
@@ -165,46 +180,36 @@ class Select extends Presenter
     protected function loadRemoteOptions(string $url, array $parameters = [], array $options = [])
     {
         $ajaxOptions = [
-            'url' => Helper::urlWithQuery(admin_url($url), $parameters),
+            'url' => admin_url($url.'?'.http_build_query($parameters)),
         ];
-        $this->config([
+        $configs = array_merge([
             'allowClear'  => true,
             'placeholder' => [
                 'id'   => '',
                 'text' => $this->placeholder(),
             ],
-        ]);
+        ], $this->config);
 
-        $ajaxOptions = array_merge($ajaxOptions, $options);
+        $configs = json_encode($configs);
+        $configs = substr($configs, 1, strlen($configs) - 2);
 
-        $values = array_filter((array) $this->filter->getValue());
+        $ajaxOptions = json_encode(array_merge($ajaxOptions, $options), JSON_UNESCAPED_UNICODE);
 
-        return $this->addVariables([
-            'remote' => compact('ajaxOptions', 'values'),
-        ]);
-    }
+        $values = (array) $this->filter->getValue();
+        $values = array_filter($values);
+        $values = json_encode($values);
 
-    /**
-     * @param string|array $key
-     * @param mixed        $value
-     *
-     * @return $this
-     */
-    public function addDefaultConfig($key, $value = null)
-    {
-        if (is_array($key)) {
-            foreach ($key as $k => $v) {
-                $this->addDefaultConfig($k, $v);
-            }
+        $this->script = <<<JS
 
-            return $this;
-        }
+$.ajax($ajaxOptions).done(function(data) {
+  $(".{$this->getElementClass()}").select2({
+    data: data,
+    $configs
+  }).val($values).trigger("change");
+  
+});
 
-        if (! isset($this->config[$key])) {
-            $this->config[$key] = $value;
-        }
-
-        return $this;
+JS;
     }
 
     /**
@@ -231,45 +236,74 @@ class Select extends Presenter
      * @param string $resourceUrl
      * @param $idField
      * @param $textField
-     *
-     * @return $this
      */
     public function ajax(string $resourceUrl, string $idField = 'id', string $textField = 'text')
     {
-        $this->config([
+        $configs = array_merge([
             'allowClear'         => true,
             'placeholder'        => $this->placeholder(),
             'minimumInputLength' => 1,
-        ]);
+        ], $this->config);
 
-        $url = admin_url($resourceUrl);
+        $resourceUrl = admin_url($resourceUrl);
 
-        return $this->addVariables(['ajax' => compact('url', 'idField', 'textField')]);
+        $configs = json_encode($configs);
+        $configs = substr($configs, 1, strlen($configs) - 2);
+
+        $this->script = <<<JS
+
+$(".{$this->getElementClass()}").select2({
+  ajax: {
+    url: "$resourceUrl",
+    dataType: 'json',
+    delay: 250,
+    data: function (params) {
+      return {
+        q: params.term,
+        page: params.page
+      };
+    },
+    processResults: function (data, params) {
+      params.page = params.page || 1;
+
+      return {
+        results: $.map(data.data, function (d) {
+                   d.id = d.$idField;
+                   d.text = d.$textField;
+                   return d;
+                }),
+        pagination: {
+          more: data.next_page_url
+        }
+      };
+    },
+    cache: true
+  },
+  $configs,
+  escapeMarkup: function (markup) {
+      return markup;
+  }
+});
+
+JS;
     }
 
     /**
      * @return array
      */
-    public function defaultVariables(): array
+    public function variables(): array
     {
         return [
             'options'   => $this->buildOptions(),
             'class'     => $this->getElementClass(),
-            'selector'  => $this->getElementClassSelector(),
             'selectAll' => $this->selectAll,
-            'configs'   => $this->config,
         ];
-    }
-
-    public function getElementClassSelector()
-    {
-        return '.'.$this->getElementClass();
     }
 
     /**
      * @return string
      */
-    public function getElementClass(): string
+    protected function getElementClass(): string
     {
         return $this->elementClass ?:
             ($this->elementClass = $this->getClass($this->filter->column()));
@@ -287,35 +321,35 @@ class Select extends Presenter
      */
     public function load($target, string $resourceUrl, string $idField = 'id', string $textField = 'text'): self
     {
-        return $this->loads($target, $resourceUrl, $idField, $textField);
+        $class = $this->getElementClass();
+
+        $resourceUrl = admin_url($resourceUrl);
+
+        $script = <<<JS
+$(document).off('change', ".{$class}");
+$(document).on('change', ".{$class}", function () {
+    var target = $(this).closest('form').find(".{$this->getClass($target)}");
+    if (this.value !== '0' && ! this.value) {
+        return;
     }
+    $.ajax("$resourceUrl?q="+this.value).then(function (data) {
+        target.find("option").remove();
+        $.each(data, function (i, item) {
+            $(target).append($('<option>', {
+                value: item.$idField,
+                text : item.$textField
+            }));
+        });
+        
+        $(target).val(target.attr('data-value')).trigger('change');
+    });
+});
+$(".{$class}").trigger('change')
+JS;
 
-    /**
-     * 联动加载多个字段.
-     *
-     * @param array|string $fields
-     * @param array|string $sourceUrls
-     * @param string $idField
-     * @param string $textField
-     *
-     * @return $this
-     */
-    public function loads($fields = [], $sourceUrls = [], string $idField = 'id', string $textField = 'text')
-    {
-        $fieldsStr = implode('^', array_map(function ($field) {
-            return $this->filter->formatColumnClass($field);
-        }, (array) $fields));
-        $urlsStr = implode('^', array_map(function ($url) {
-            return admin_url($url);
-        }, (array) $sourceUrls));
+        Admin::script($script);
 
-        return $this->addVariables(['loads' => [
-            'fields'    => $fieldsStr,
-            'urls'      => $urlsStr,
-            'idField'   => $idField,
-            'textField' => $textField,
-            'group'     => 'form',
-        ]]);
+        return $this;
     }
 
     /**

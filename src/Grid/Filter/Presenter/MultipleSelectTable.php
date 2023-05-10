@@ -33,21 +33,18 @@ class MultipleSelectTable extends SelectTable
 
     protected function addScript()
     {
-        $options = json_encode($this->options);
-
         Admin::script(
             <<<JS
-Dcat.init('#{$this->id}', function (self) {
-    var dialogId = self.parent().find('{$this->dialog->getElementSelector()}').attr('id');
-    Dcat.grid.SelectTable({
-        dialog: '[data-id="' + dialogId + '"]',
-        container: '#{$this->id}',
-        input: '#hidden-{$this->id}',
-        multiple: true,
-        max: {$this->max},
-        values: {$options},
-    });
-})
+{$this->dialog->getScript()}
+
+Dcat.grid.SelectTable({
+    dialog: '#{$this->dialog->id()}',
+    container: '#{$this->id}',
+    input: '#hidden-{$this->id}',
+    multiple: true,
+    max: {$this->max},
+    values: {$this->options},
+});
 JS
         );
     }

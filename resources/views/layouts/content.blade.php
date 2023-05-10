@@ -32,16 +32,16 @@
 
     <div class="content-body" id="app">
         {{-- 页面埋点--}}
-        {!! admin_section(Dcat\Admin\Admin::SECTION['APP_INNER_BEFORE']) !!}
+        {!! admin_section(AdminSection::APP_INNER_BEFORE) !!}
 
         @yield('content')
 
         {{-- 页面埋点--}}
-        {!! admin_section(Dcat\Admin\Admin::SECTION['APP_INNER_AFTER']) !!}
+        {!! admin_section(AdminSection::APP_INNER_AFTER) !!}
     </div>
 
     {!! Dcat\Admin\Admin::asset()->scriptToHtml() !!}
-    <div class="extra-html">{!! Dcat\Admin\Admin::html() !!}</div>
+    {!! Dcat\Admin\Admin::html() !!}
 @endsection
 
 @if(! request()->pjax())
@@ -49,7 +49,7 @@
 @else
     <title>{{ Dcat\Admin\Admin::title() }} @if($header) | {{ $header }}@endif</title>
 
-    <script>Dcat.wait()</script>
+    <script>Dcat.pjaxResponded()</script>
 
     {!! Dcat\Admin\Admin::asset()->cssToHtml() !!}
     {!! Dcat\Admin\Admin::asset()->jsToHtml() !!}

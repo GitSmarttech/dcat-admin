@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Layout;
 
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Support\Helper;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
@@ -65,7 +64,7 @@ class SectionManager
     protected function put(string $section, $content, bool $append = false, int $priority = 10)
     {
         if (! $section) {
-            throw new RuntimeException('Section name is required.');
+            throw new \InvalidArgumentException('Section name is required.');
         }
 
         if (! isset($this->sections[$section])) {
@@ -194,6 +193,8 @@ class SectionManager
             $result .= $value;
             $options->previous = $result;
         }
+
+//        $this->sections[$name] = [['value' => &$result]];
 
         return $result;
     }

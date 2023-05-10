@@ -1,8 +1,6 @@
 
 import Swal from '../sweetalert/sweetalert2'
 
-let w = window;
-
 export default class SweetAlert2 {
     constructor(Dcat) {
         let _this = this;
@@ -13,7 +11,7 @@ export default class SweetAlert2 {
         Swal.warning = _this.warning.bind(_this);
         Swal.confirm = _this.confirm.bind(_this);
 
-        w.swal = w.Swal = _this.swal = Dcat.swal = Swal;
+        _this.swal = Dcat.swal = Swal;
         
         Dcat.confirm = Swal.confirm;
     }
@@ -59,8 +57,8 @@ export default class SweetAlert2 {
     fire(title, message, type, options) {
         options = $.extend({
             title: title,
+            text: message,
             type: type,
-            html: message,
         }, options);
 
         return this.swal.fire(options);

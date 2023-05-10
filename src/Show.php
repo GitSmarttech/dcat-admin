@@ -26,8 +26,8 @@ use Illuminate\Support\Traits\Macroable;
 
 class Show implements Renderable
 {
-    use HasBuilderEvents;
-    use Macroable {
+    use HasBuilderEvents,
+        Macroable {
             __call as macroCall;
         }
 
@@ -131,10 +131,10 @@ class Show implements Renderable
             $this->repository = Admin::repository($model);
         } elseif ($model instanceof Model) {
             if ($key = $model->getKey()) {
-                $this->setKey($key);
-                $this->setKeyName($model->getKeyName());
+                $this->key = $model->getKey();
+                $this->keyName = $model->getKeyName();
 
-                $this->model($model);
+                $this->model(new Fluent($model->toArray()));
             } else {
                 $this->repository = Admin::repository($model);
             }
@@ -144,10 +144,6 @@ class Show implements Renderable
             $this->model(new Fluent($model));
         } else {
             $this->model(new Fluent());
-        }
-
-        if (! $this->model && $this->repository) {
-            $this->model($this->repository->detail($this));
         }
     }
 
@@ -210,18 +206,18 @@ class Show implements Renderable
     }
 
     /**
-     * @param Fluent|\Illuminate\Database\Eloquent\Model|null $model
+     * @param Fluent|null $model
      *
-     * @return Fluent|$this|\Illuminate\Database\Eloquent\Model
+     * @return Fluent|$this
      */
-    public function model($model = null)
+    public function model(Fluent $model = null)
     {
         if ($model === null) {
-            return $this->model;
-        }
+            if (! $this->model) {
+                $this->setupModel();
+            }
 
-        if (is_array($model)) {
-            $model = new Fluent($model);
+            return $this->model;
         }
 
         $this->model = $model;
@@ -229,15 +225,29 @@ class Show implements Renderable
         return $this;
     }
 
+    protected function setupModel()
+    {
+        if ($this->repository) {
+            $this->model(new Fluent($this->repository->detail($this)));
+        } else {
+            $this->model(new Fluent());
+        }
+    }
+
     /**
      * Set a view to render.
      *
      * @param string $view
+     * @param array  $variables
      *
      * @return $this
      */
-    public function view($view)
+    public function view($view, $variables = [])
     {
+        if (! empty($variables)) {
+            $this->with($variables);
+        }
+
         $this->panel->view($view);
 
         return $this;
@@ -575,9 +585,27 @@ class Show implements Renderable
     }
 
     /**
+     * Set resource path.
+     *
+     * @param string $resource
+     *
+     * @return $this
+     */
+    public function resource(string $resource)
+    {
+        if ($resource) {
+            $this->resource = admin_url($resource);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get resource path.
+     *
      * @return string
      */
-    public function resource()
+    public function getResource()
     {
         if (empty($this->resource)) {
             $path = request()->path();
@@ -589,22 +617,6 @@ class Show implements Renderable
         }
 
         return $this->resource;
-    }
-
-    /**
-     * Set resource path.
-     *
-     * @param string $path
-     *
-     * @return $this
-     */
-    public function setResource($path)
-    {
-        if ($path) {
-            $this->resource = admin_url($path);
-        }
-
-        return $this;
     }
 
     /**
@@ -667,31 +679,35 @@ class Show implements Renderable
      */
     public function render()
     {
-        $model = $this->model();
+        try {
+            $model = $this->model();
 
-        if (is_callable($this->builder)) {
-            call_user_func($this->builder, $this);
+            if (is_callable($this->builder)) {
+                call_user_func($this->builder, $this);
+            }
+
+            if ($this->fields->isEmpty()) {
+                $this->all();
+            }
+
+            if (is_array($this->builder)) {
+                $this->fields($this->builder);
+            }
+
+            $this->fields->each->fill($model);
+            $this->relations->each->model($model);
+
+            $this->callComposing();
+
+            $data = [
+                'panel'     => $this->panel->fill($this->fields),
+                'relations' => $this->relations,
+            ];
+
+            return view($this->view, $data)->render();
+        } catch (\Throwable $e) {
+            return Admin::makeExceptionHandler()->handle($e);
         }
-
-        if ($this->fields->isEmpty()) {
-            $this->all();
-        }
-
-        if (is_array($this->builder)) {
-            $this->fields($this->builder);
-        }
-
-        $this->fields->each->fill($model);
-        $this->relations->each->model($model);
-
-        $this->callComposing();
-
-        $data = [
-            'panel'     => $this->panel->fill($this->fields),
-            'relations' => $this->relations,
-        ];
-
-        return view($this->view, $data)->render();
     }
 
     /**

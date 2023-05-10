@@ -4,12 +4,9 @@ namespace Dcat\Admin\Grid\Tools;
 
 use Dcat\Admin\Admin;
 use Dcat\Admin\Support\Helper;
-use Illuminate\Support\Traits\Macroable;
 
 class QuickSearch extends AbstractTool
 {
-    use Macroable;
-
     /**
      * @var string
      */
@@ -28,7 +25,7 @@ class QuickSearch extends AbstractTool
     /**
      * @var int rem
      */
-    protected $width = 18;
+    protected $width = 19;
 
     /**
      * @var bool
@@ -36,11 +33,23 @@ class QuickSearch extends AbstractTool
     protected $autoSubmit = true;
 
     /**
+     * @param string|null $name
+     *
+     * @return $this
+     */
+    public function setQueryName(?string $name)
+    {
+        $this->queryName = $name;
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getQueryName()
     {
-        return $this->parent->makeName($this->queryName);
+        return $this->queryName;
     }
 
     /**
@@ -74,7 +83,7 @@ class QuickSearch extends AbstractTool
      */
     public function value()
     {
-        return trim(request($this->getQueryName()));
+        return trim(request($this->queryName));
     }
 
     /**
@@ -83,7 +92,7 @@ class QuickSearch extends AbstractTool
     public function formAction()
     {
         return Helper::fullUrlWithoutQuery([
-            $this->getQueryName(),
+            $this->queryName,
             $this->parent->model()->getPageName(),
             '_pjax',
         ]);
@@ -110,7 +119,7 @@ class QuickSearch extends AbstractTool
 
         $data = [
             'action'      => $this->formAction(),
-            'key'         => $this->getQueryName(),
+            'key'         => $this->queryName,
             'value'       => $this->value(),
             'placeholder' => $this->placeholder ?: trans('admin.search'),
             'width'       => $this->width,

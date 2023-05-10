@@ -2,6 +2,7 @@
 
 namespace Dcat\Admin\Form\Field;
 
+use Dcat\Admin\Admin;
 use Dcat\Admin\Form\Field;
 use Dcat\Admin\Support\Helper;
 use Illuminate\Contracts\Support\Arrayable;
@@ -10,6 +11,9 @@ use Illuminate\Support\Collection;
 
 class Tags extends Field
 {
+    public static $js = '@select2';
+    public static $css = '@select2';
+
     /**
      * @var array
      */
@@ -40,7 +44,7 @@ class Tags extends Field
      */
     protected function formatFieldData($data)
     {
-        $value = $this->getValueFromData($data);
+        $value = Arr::get($data, $this->column);
 
         if (is_array($value) && $this->keyAsValue) {
             $value = array_column($value, $this->visibleColumn, $this->key);
@@ -57,7 +61,7 @@ class Tags extends Field
      *
      * @return $this
      */
-    public function pluck($visibleColumn, $key = 'id')
+    public function pluck($visibleColumn, $key)
     {
         if (! empty($visibleColumn) && ! empty($key)) {
             $this->keyAsValue = true;
@@ -131,7 +135,13 @@ class Tags extends Field
             return $value;
         }
 
-        return array_filter($value, 'strlen');
+        $value = array_filter($value, 'strlen');
+
+        if ($value && ! Arr::isAssoc($value)) {
+            $value = implode(',', $value);
+        }
+
+        return $value;
     }
 
     /**
@@ -165,7 +175,39 @@ class Tags extends Field
     {
         $url = admin_url($url);
 
-        return $this->addVariables(['ajax' => compact('url', 'idField', 'textField')]);
+        $this->ajaxScript = <<<JS
+  ajax: {
+    url: "$url",
+    dataType: 'json',
+    delay: 250,
+    cache: true,
+    data: function (params) {
+      return {
+        q: params.term,
+        page: params.page
+      };
+    },
+    processResults: function (data, params) {
+      params.page = params.page || 1;
+
+      return {
+        results: $.map(data.data, function (d) {
+                   d.id = d.{$idField};
+                   d.text = d.{$textField};
+                   return d;
+                }),
+        pagination: {
+          more: data.next_page_url
+        }
+      };
+    },
+  },
+  escapeMarkup: function (markup) {
+      return markup;
+  },
+JS;
+
+        return $this;
     }
 
     /**
@@ -181,17 +223,60 @@ class Tags extends Field
             );
         }
 
+        $this->setupScript();
+
         if ($this->keyAsValue) {
             $options = $value + $this->options;
         } else {
             $options = array_unique(array_merge($value, (array) $this->options));
         }
 
-        $this->addVariables([
+        return parent::render()->with([
             'options'    => $options,
             'keyAsValue' => $this->keyAsValue,
         ]);
+    }
 
-        return parent::render();
+    protected function setupScript()
+    {
+        // 解决部分浏览器开启 tags: true 后无法输入中文的BUG
+        // 支持"逗号" "分号" "空格"结尾生成tags
+        $this->script = <<<JS
+$("{$this->getElementClassSelector()}").select2({
+    tags: true,
+    tokenSeparators: [',', ';', '，', '；', ' '],
+    {$this->ajaxScript}
+    createTag: function(params) {
+        if (/[,;，； ]/.test(params.term)) {
+            var str = params.term.trim().replace(/[,;，；]*$/, '');
+            return { id: str, text: str }
+        } else {
+            return null;
+        }
+    }
+});
+JS;
+
+        // 解决输入中文后无法回车结束的问题。
+        Admin::script(
+            <<<'JS'
+$(document).off('keyup', '.select2-selection--multiple .select2-search__field').on('keyup', '.select2-selection--multiple .select2-search__field', function (event) {
+    try {
+        if (event.keyCode == 13) {
+            var $this = $(this), optionText = $this.val();
+            if (optionText != "" && $this.find("option[value='" + optionText + "']").length === 0) {
+                var $select = $this.parents('.select2-container').prev("select");
+                var newOption = new Option(optionText, optionText, true, true);
+                $select.append(newOption).trigger('change');
+                $this.val('');
+                $select.select2('close');
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+});
+JS
+        );
     }
 }

@@ -3,10 +3,6 @@
 namespace Dcat\Admin\Grid;
 
 use Dcat\Admin\Admin;
-use Dcat\Admin\Exception\RuntimeException;
-use Dcat\Admin\Grid\Events\ApplyFilter;
-use Dcat\Admin\Grid\Events\Fetched;
-use Dcat\Admin\Grid\Events\Fetching;
 use Dcat\Admin\Grid\Filter\AbstractFilter;
 use Dcat\Admin\Grid\Filter\Between;
 use Dcat\Admin\Grid\Filter\Date;
@@ -34,12 +30,10 @@ use Dcat\Admin\Grid\Filter\WhereBetween;
 use Dcat\Admin\Grid\Filter\Year;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasBuilderEvents;
-use Dcat\Admin\Traits\HasVariables;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Macroable;
 
 /**
  * Class Filter.
@@ -70,8 +64,6 @@ use Illuminate\Support\Traits\Macroable;
 class Filter implements Renderable
 {
     use HasBuilderEvents;
-    use Macroable;
-    use HasVariables;
 
     const MODE_RIGHT_SIDE = 'right-side';
     const MODE_PANEL = 'panel';
@@ -144,7 +136,7 @@ class Filter implements Renderable
     /**
      * @var bool
      */
-    public $expand;
+    public $expand = false;
 
     /**
      * @var Collection
@@ -380,6 +372,26 @@ class Filter implements Renderable
     }
 
     /**
+     * @param string $name
+     *
+     * @return $this
+     */
+    public function setName($name)
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
      * @return $this
      */
     public function withoutBorder()
@@ -464,11 +476,7 @@ class Filter implements Renderable
 
         return tap(array_filter($conditions), function ($conditions) {
             if (! empty($conditions)) {
-                if ($this->expand === null || $this->mode !== static::MODE_RIGHT_SIDE) {
-                    $this->expand();
-                }
-
-                $this->grid()->fireOnce(new ApplyFilter([$conditions]));
+                $this->expand();
 
                 $this->grid()->model()->disableBindTreeQuery();
             }
@@ -484,14 +492,14 @@ class Filter implements Renderable
      */
     protected function sanitizeInputs(&$inputs)
     {
-        if (! $prefix = $this->grid()->getNamePrefix()) {
-            return;
+        if (! $this->name) {
+            return $inputs;
         }
 
-        $inputs = collect($inputs)->filter(function ($input, $key) use ($prefix) {
-            return Str::startsWith($key, $prefix);
-        })->mapWithKeys(function ($val, $key) use ($prefix) {
-            $key = str_replace($prefix, '', $key);
+        $inputs = collect($inputs)->filter(function ($input, $key) {
+            return Str::startsWith($key, "{$this->name}_");
+        })->mapWithKeys(function ($val, $key) {
+            $key = str_replace("{$this->name}_", '', $key);
 
             return [$key => $val];
         })->toArray();
@@ -536,17 +544,6 @@ class Filter implements Renderable
     }
 
     /**
-     * 统计查询条件的数量.
-     *
-     * @return int
-     */
-    public function countConditions()
-    {
-        return $this->mode() === Filter::MODE_RIGHT_SIDE
-            ? count($this->getConditions()) : 0;
-    }
-
-    /**
      * @param string $key
      * @param string $label
      *
@@ -566,7 +563,7 @@ class Filter implements Renderable
      */
     public function getScopeQueryName()
     {
-        return $this->grid()->makeName('_scope_');
+        return $this->grid()->getName().'_scope_';
     }
 
     /**
@@ -634,24 +631,18 @@ class Filter implements Renderable
     /**
      * Execute the filter with conditions.
      *
-     * @return Collection|mixed
+     * @param bool $toArray
+     *
+     * @return array|Collection|mixed
      */
-    public function execute()
+    public function execute(bool $toArray = true)
     {
         $conditions = array_merge(
             $this->getConditions(),
             $this->getScopeConditions()
         );
 
-        $this->model->addConditions($conditions);
-
-        $this->grid()->fireOnce(new Fetching());
-
-        $data = $this->model->buildData();
-
-        $this->grid()->fireOnce(new Fetched([&$data]));
-
-        return $data;
+        return $this->model->addConditions($conditions)->buildData($toArray);
     }
 
     /**
@@ -723,12 +714,7 @@ class Filter implements Renderable
             $this->view = $this->mode === static::MODE_RIGHT_SIDE ? 'admin::filter.right-side-container' : 'admin::filter.container';
         }
 
-        return view($this->view)->with($this->variables())->render();
-    }
-
-    protected function defaultVariables()
-    {
-        return [
+        return view($this->view)->with([
             'action'             => $this->action ?: $this->urlWithoutFilters(),
             'layout'             => $this->layout,
             'filterID'           => $this->disableCollapse ? '' : $this->filterID,
@@ -737,7 +723,7 @@ class Filter implements Renderable
             'border'             => $this->border,
             'containerClass'     => $this->containerClass,
             'disableResetButton' => $this->disableResetButton,
-        ];
+        ])->render();
     }
 
     /**
@@ -750,7 +736,7 @@ class Filter implements Renderable
         $filters = collect($this->filters);
 
         /** @var Collection $columns */
-        $columns = $filters->map->getElementName()->flatten();
+        $columns = $filters->map->column()->flatten();
 
         $columns->push(
             $this->grid()->model()->getPageName()
@@ -790,7 +776,7 @@ class Filter implements Renderable
         if (! empty(static::$supports[$method])) {
             $class = static::$supports[$method];
             if (! is_subclass_of($class, AbstractFilter::class)) {
-                throw new RuntimeException("The class [{$class}] must be a type of ".AbstractFilter::class.'.');
+                throw new \InvalidArgumentException("The class [{$class}] must be a type of ".AbstractFilter::class.'.');
             }
 
             return $this->addFilter(new $class(...$arguments));

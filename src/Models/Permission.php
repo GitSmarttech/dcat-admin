@@ -21,7 +21,7 @@ class Permission extends Model implements Sortable
     /**
      * @var array
      */
-    protected $fillable = ['parent_id', 'name', 'slug', 'http_method', 'http_path'];
+    protected $fillable = ['name', 'slug', 'http_method', 'http_path'];
 
     /**
      * @var array
@@ -33,22 +33,19 @@ class Permission extends Model implements Sortable
     protected $titleColumn = 'name';
 
     /**
-     * {@inheritDoc}
+     * Create a new Eloquent model instance.
+     *
+     * @param array $attributes
      */
     public function __construct(array $attributes = [])
-    {
-        $this->init();
-
-        parent::__construct($attributes);
-    }
-
-    protected function init()
     {
         $connection = config('admin.database.connection') ?: config('database.default');
 
         $this->setConnection($connection);
 
         $this->setTable(config('admin.database.permissions_table'));
+
+        parent::__construct($attributes);
     }
 
     /**
@@ -63,18 +60,6 @@ class Permission extends Model implements Sortable
         $relatedModel = config('admin.database.roles_model');
 
         return $this->belongsToMany($relatedModel, $pivotTable, 'permission_id', 'role_id');
-    }
-
-    /**
-     * @return BelongsToMany
-     */
-    public function menus(): BelongsToMany
-    {
-        $pivotTable = config('admin.database.permission_menu_table');
-
-        $relatedModel = config('admin.database.menu_model');
-
-        return $this->belongsToMany($relatedModel, $pivotTable, 'permission_id', 'menu_id')->withTimestamps();
     }
 
     /**
@@ -162,7 +147,7 @@ class Permission extends Model implements Sortable
             return false;
         }
 
-        if (! Helper::matchRequestPath($path, $request->decodedPath())) {
+        if (! Helper::matchRequestPath($path)) {
             return false;
         }
 

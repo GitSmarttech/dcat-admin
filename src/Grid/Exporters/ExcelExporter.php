@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Grid\Exporters;
 
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Grid;
 use Dcat\EasyExcel\Excel;
 
@@ -13,7 +12,7 @@ class ExcelExporter extends AbstractExporter
         parent::__construct($titles);
 
         if (! class_exists(Excel::class)) {
-            throw new RuntimeException('To use exporter, please install [dcat/easy-excel] first.');
+            throw new \Exception('To use exporter, please install [dcat/easy-excel] first.');
         }
     }
 
@@ -34,7 +33,7 @@ class ExcelExporter extends AbstractExporter
             $exporter->data($this->buildData() ?: [[]]);
         }
 
-        $exporter->headings($this->titles())->download($filename);
+        $exporter->headings($this->titles)->download($filename);
 
         exit;
     }

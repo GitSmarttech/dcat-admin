@@ -3,19 +3,15 @@
 namespace Dcat\Admin\Grid\Displayers;
 
 use Dcat\Admin\Actions\Action;
-use Dcat\Admin\Grid\Actions\Delete;
-use Dcat\Admin\Grid\Actions\Edit;
-use Dcat\Admin\Grid\Actions\QuickEdit;
-use Dcat\Admin\Grid\Actions\Show;
+use Dcat\Admin\Form;
 use Dcat\Admin\Grid\RowAction;
 use Dcat\Admin\Support\Helper;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
-use Illuminate\Support\Traits\Macroable;
 
 class Actions extends AbstractDisplayer
 {
-    use Macroable;
+    protected static $resolvedDialog;
 
     /**
      * @var array
@@ -79,7 +75,7 @@ class Actions extends AbstractDisplayer
     /**
      * @param mixed $action
      *
-     * @return mixed
+     * @return void
      */
     protected function prepareAction(&$action)
     {
@@ -88,13 +84,6 @@ class Actions extends AbstractDisplayer
                 ->setColumn($this->column)
                 ->setRow($this->row);
         }
-
-        return $action;
-    }
-
-    public function view(bool $value = true)
-    {
-        return $this->setAction('view', $value);
     }
 
     /**
@@ -106,12 +95,7 @@ class Actions extends AbstractDisplayer
      */
     public function disableView(bool $disable = true)
     {
-        return $this->setAction('view', ! $disable);
-    }
-
-    public function delete(bool $value = true)
-    {
-        return $this->setAction('delete', $value);
+        return $this->disableDefaultAction('view', $disable);
     }
 
     /**
@@ -123,12 +107,7 @@ class Actions extends AbstractDisplayer
      */
     public function disableDelete(bool $disable = true)
     {
-        return $this->setAction('delete', ! $disable);
-    }
-
-    public function edit(bool $value = true)
-    {
-        return $this->setAction('edit', $value);
+        return $this->disableDefaultAction('delete', $disable);
     }
 
     /**
@@ -140,12 +119,7 @@ class Actions extends AbstractDisplayer
      */
     public function disableEdit(bool $disable = true)
     {
-        return $this->setAction('edit', ! $disable);
-    }
-
-    public function quickEdit(bool $value = true)
-    {
-        return $this->setAction('quickEdit', $value);
+        return $this->disableDefaultAction('edit', $disable);
     }
 
     /**
@@ -157,7 +131,7 @@ class Actions extends AbstractDisplayer
      */
     public function disableQuickEdit(bool $disable = true)
     {
-        return $this->setAction('quickEdit', ! $disable);
+        return $this->disableDefaultAction('quickEdit', $disable);
     }
 
     /**
@@ -166,9 +140,9 @@ class Actions extends AbstractDisplayer
      *
      * @return $this
      */
-    protected function setAction(string $key, bool $value)
+    protected function disableDefaultAction(string $key, bool $disable)
     {
-        $this->actions[$key] = $value;
+        $this->actions[$key] = ! $disable;
 
         return $this;
     }
@@ -202,10 +176,10 @@ class Actions extends AbstractDisplayer
      */
     protected function resetDefaultActions()
     {
-        $this->view($this->grid->option('view_button'));
-        $this->edit($this->grid->option('edit_button'));
-        $this->quickEdit($this->grid->option('quick_edit_button'));
-        $this->delete($this->grid->option('delete_button'));
+        $this->disableView(! $this->grid->option('show_view_button'));
+        $this->disableEdit(! $this->grid->option('show_edit_button'));
+        $this->disableQuickEdit(! $this->grid->option('show_quick_edit_button'));
+        $this->disableDelete(! $this->grid->option('show_delete_button'));
     }
 
     /**
@@ -253,20 +227,13 @@ class Actions extends AbstractDisplayer
      */
     protected function renderView()
     {
-        $action = config('admin.grid.actions.view') ?: Show::class;
-        $action = $action::make($this->getViewLabel());
-
-        return $this->prepareAction($action);
-    }
-
-    /**
-     * @return string
-     */
-    protected function getViewLabel()
-    {
         $label = trans('admin.show');
 
-        return "<i title='{$label}' class=\"feather icon-eye grid-action-icon\"></i> &nbsp;";
+        return <<<EOT
+<a href="{$this->resource()}/{$this->getKey()}" title="{$label}">
+    <i class="feather icon-eye grid-action-icon"></i>
+</a>&nbsp;
+EOT;
     }
 
     /**
@@ -276,20 +243,13 @@ class Actions extends AbstractDisplayer
      */
     protected function renderEdit()
     {
-        $action = config('admin.grid.actions.edit') ?: Edit::class;
-        $action = $action::make($this->getEditLabel());
-
-        return $this->prepareAction($action);
-    }
-
-    /**
-     * @return string
-     */
-    protected function getEditLabel()
-    {
         $label = trans('admin.edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit-1 grid-action-icon\"></i> &nbsp;";
+        return <<<EOT
+<a href="{$this->resource()}/{$this->getKey()}/edit" title="{$label}">
+    <i class="feather icon-edit-1 grid-action-icon"></i>
+</a>&nbsp;
+EOT;
     }
 
     /**
@@ -297,20 +257,24 @@ class Actions extends AbstractDisplayer
      */
     protected function renderQuickEdit()
     {
-        $action = config('admin.grid.actions.quick_edit') ?: QuickEdit::class;
-        $action = $action::make($this->getQuickEditLabel());
+        if (! static::$resolvedDialog) {
+            static::$resolvedDialog = true;
 
-        return $this->prepareAction($action);
-    }
+            [$width, $height] = $this->grid->option('dialog_form_area');
 
-    /**
-     * @return string
-     */
-    protected function getQuickEditLabel()
-    {
+            Form::dialog(trans('admin.edit'))
+                ->click(".{$this->grid->getRowName()}-edit")
+                ->dimensions($width, $height)
+                ->success('Dcat.reload()');
+        }
+
         $label = trans('admin.quick_edit');
 
-        return "<i title='{$label}' class=\"feather icon-edit grid-action-icon\"></i> &nbsp;";
+        return <<<EOF
+<a title="{$label}" class="{$this->grid->getRowName()}-edit" data-url="{$this->resource()}/{$this->getKey()}/edit" href="javascript:void(0);">
+    <i class="feather icon-edit grid-action-icon"></i>
+</a>&nbsp;
+EOF;
     }
 
     /**
@@ -320,19 +284,12 @@ class Actions extends AbstractDisplayer
      */
     protected function renderDelete()
     {
-        $action = config('admin.grid.actions.delete') ?: Delete::class;
-        $action = $action::make($this->getDeleteLabel());
-
-        return $this->prepareAction($action);
-    }
-
-    /**
-     * @return string
-     */
-    protected function getDeleteLabel()
-    {
         $label = trans('admin.delete');
 
-        return "<i class=\"feather icon-trash grid-action-icon\" title='{$label}'></i> &nbsp;";
+        return <<<EOT
+<a title="{$label}" href="javascript:void(0);" data-message="ID - {$this->getKey()}" data-url="{$this->resource()}/{$this->getKey()}" data-action="delete">
+    <i class="feather icon-trash grid-action-icon"></i>
+</a>&nbsp;
+EOT;
     }
 }

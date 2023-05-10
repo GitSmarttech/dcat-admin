@@ -2,6 +2,7 @@
 
 namespace Dcat\Admin\Form\Field;
 
+use Dcat\Admin\Admin;
 use Dcat\Admin\Form\Field;
 use Dcat\Admin\Support\Helper;
 use Illuminate\Support\Arr;
@@ -54,17 +55,17 @@ class ListField extends Field
     }
 
     /**
-     * {@inheritdoc}
+     * Fill data to the field.
+     *
+     * @param array $data
+     *
+     * @return array
      */
     public function formatFieldData($data)
     {
         $this->data = $data;
 
-        $value = Helper::array($this->getValueFromData($data, null, $this->value));
-
-        unset($value['values'][static::DEFAULT_FLAG_NAME]);
-
-        return $value;
+        return Helper::array(Arr::get($data, $this->column, $this->value));
     }
 
     /**
@@ -135,15 +136,48 @@ class ListField extends Field
     /**
      * {@inheritdoc}
      */
+    protected function addScript()
+    {
+        $value = old($this->column, $this->value());
+
+        $number = $value ? count($value) : 0;
+
+        $this->script = <<<JS
+(function () {
+    var index = {$number};
+    $('.{$this->formatColumn()}-add').on('click', function () {
+        var tpl = $('template.{$this->formatColumn()}-tpl').html().replace('{key}', index);
+        $('tbody.list-{$this->formatColumn()}-table').append(tpl);
+        
+        index++;
+    });
+    $('tbody').on('click', '.{$this->formatColumn()}-remove', function () {
+        $(this).closest('tr').remove();
+    });
+})();
+JS;
+    }
+
+    /**
+     * @return mixed
+     */
+    protected function formatColumn()
+    {
+        return str_replace('.', '-', $this->column);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     protected function prepareInputValue($value)
     {
         unset($value['values'][static::DEFAULT_FLAG_NAME]);
 
         if (empty($value['values'])) {
-            return [];
+            return '[]';
         }
 
-        return array_values($value['values']);
+        return json_encode(array_values($value['values']));
     }
 
     /**
@@ -151,9 +185,11 @@ class ListField extends Field
      */
     public function render()
     {
-        $value = $this->value();
+        $this->addScript();
 
-        $this->addVariables(['count' => $value ? count($value) : 0]);
+        Admin::style('td .form-group {margin-bottom: 0 !important;}');
+
+        $this->addVariables(['columnClass' => $this->formatColumn()]);
 
         return parent::render();
     }

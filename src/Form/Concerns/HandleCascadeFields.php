@@ -18,7 +18,7 @@ trait HandleCascadeFields
 
         call_user_func($closure, $this);
 
-        $this->html($group->end())->plain();
+        $group->end();
 
         return $group;
     }

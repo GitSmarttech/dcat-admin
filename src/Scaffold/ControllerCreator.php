@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Scaffold;
 
-use Dcat\Admin\Exception\AdminException;
 use Dcat\Admin\Support\Helper;
 
 class ControllerCreator
@@ -55,7 +54,7 @@ class ControllerCreator
         }
 
         if ($this->files->exists($path)) {
-            throw new AdminException("Controller [$this->name] already exists!");
+            throw new \Exception("Controller [$this->name] already exists!");
         }
 
         $stub = $this->files->get($this->getStub());

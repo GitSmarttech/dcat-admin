@@ -9,6 +9,11 @@ class Dump extends Widget
     /**
      * @var string
      */
+    protected $view = 'admin::widgets.dump';
+
+    /**
+     * @var string
+     */
     protected $padding = '10px';
 
     /**

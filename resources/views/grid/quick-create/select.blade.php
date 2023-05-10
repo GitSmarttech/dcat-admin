@@ -8,5 +8,3 @@
     </select>
 </div>
 
-@include('admin::form.select-script')
-

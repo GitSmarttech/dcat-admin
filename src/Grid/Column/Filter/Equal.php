@@ -66,7 +66,7 @@ class Equal extends Filter
     {
         $this->dateFormat = $format;
 
-        $this->requireAssets();
+        $this->collectAssets();
         $this->addDateScript();
 
         return $this;
@@ -80,7 +80,7 @@ class Equal extends Filter
             'format'           => $this->dateFormat,
         ];
 
-        $options = admin_javascript_json($options);
+        $options = json_encode($options);
 
         Admin::script("$('.{$this->class}').datetimepicker($options);");
     }
@@ -111,8 +111,9 @@ class Equal extends Filter
         return $this->renderInput();
     }
 
-    protected function requireAssets()
+    protected function collectAssets()
     {
-        Admin::requireAssets(['moment', 'bootstrap-datetimepicker']);
+        Admin::collectAssets('moment');
+        Admin::collectAssets('bootstrap-datetimepicker');
     }
 }

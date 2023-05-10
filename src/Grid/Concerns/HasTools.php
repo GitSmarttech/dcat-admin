@@ -21,7 +21,7 @@ trait HasTools
     /**
      * Setup grid tools.
      */
-    public function setUpTools()
+    public function setupTools()
     {
         $this->tools = new Tools($this);
     }
@@ -101,7 +101,7 @@ trait HasTools
      */
     public function disableToolbar(bool $val = true)
     {
-        return $this->option('toolbar', ! $val);
+        return $this->option('show_toolbar', ! $val);
     }
 
     /**
@@ -202,11 +202,12 @@ trait HasTools
     public function allowToolbar()
     {
         if (
-            $this->option('toolbar')
+            $this->option('show_toolbar')
             && (
                 $this->tools()->has()
                 || $this->allowExporter()
                 || $this->allowCreateButton()
+                || $this->allowResponsive()
                 || ! empty($this->variables['title'])
             )
         ) {

@@ -2,16 +2,14 @@
 
 namespace Dcat\Admin\Widgets;
 
-use Dcat\Admin\Support\Helper;
+use Dcat\Admin\Admin;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Str;
 
 class Markdown extends Widget
 {
-    protected $view = 'admin::widgets.markdown';
-
     /**
-     * @var string|Renderable
+     * @var string
      */
     protected $content;
 
@@ -29,13 +27,11 @@ class Markdown extends Widget
         'sequenceDiagram' => true,
     ];
 
-    public function __construct($markdown = null)
+    public function __construct($markdown = '')
     {
-        if ($markdown !== null) {
-            $this->content($markdown);
-        }
+        $markdown && $this->content($markdown);
 
-        $this->id('mkd-'.Str::random(8));
+        Admin::collectAssets('@editor-md');
     }
 
     /**
@@ -50,18 +46,27 @@ class Markdown extends Widget
         return $this;
     }
 
-    protected function renderContent()
+    protected function build()
     {
-        return Helper::render($this->content);
+        if ($this->content instanceof Renderable) {
+            $this->content = $this->content->render();
+        }
+
+        return <<<EOF
+<div {$this->formatHtmlAttributes()}><textarea style="display:none;">{$this->content}</textarea></div>
+EOF;
     }
 
     public function render()
     {
-        $this->addVariables([
-            'id'      => $this->id(),
-            'content' => $this->renderContent(),
-        ]);
+        $id = 'mkd-'.Str::random();
 
-        return parent::render();
+        $this->defaultHtmlAttribute('id', $id);
+
+        $opts = json_encode($this->options);
+
+        Admin::script("editormd.markdownToHTML('$id', $opts);");
+
+        return $this->build();
     }
 }

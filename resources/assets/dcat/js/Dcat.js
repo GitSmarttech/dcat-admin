@@ -3,11 +3,9 @@ import Helpers from './extensions/Helpers'
 import Translator from './extensions/Translator'
 
 let $ = jQuery,
-    $document = $(document),
-    waiting = false,
+    pjaxResponded = false,
     bootingCallbacks = [],
     actions = {},
-    initialized = {},
     defaultOptions = {
         pjax_container_selector: '#pjax-container',
     };
@@ -81,7 +79,7 @@ export default class Dcat {
         let _this = this;
 
         if (! _window || _window === window) {
-            if (! waiting) {
+            if (! pjaxResponded) {
                 return $(callback);
             }
 
@@ -98,82 +96,25 @@ export default class Dcat {
     }
 
     /**
-     * 监听动态生成元素.
-     *
-     * @param selector
-     * @param callback
-     * @param options
-     */
-    init(selector, callback, options) {
-        let self = this,
-            clear = function () {
-                if (initialized[selector]) {
-                    initialized[selector].disconnect();
-                }
-            };
-
-        $document.one('pjax:complete', clear);
-
-        clear();
-
-        setTimeout(function () {
-            initialized[selector] = $.initialize(selector, function () {
-                let $this = $(this),
-                    id = $this.attr('id');
-
-                if ($this.attr('initialized')) {
-                    return;
-                }
-                $this.attr('initialized', '1');
-
-                // 如果没有ID，则自动生成
-                if (! id) {
-                    id = "_"+self.helpers.random();
-                    $this.attr('id', id);
-                }
-
-                callback.call(this, $this, id)
-            }, options);
-        });
-    }
-
-    /**
-     * 清理注册过的init回调.
-     *
-     * @param selector
-     */
-    offInit(selector) {
-        if (initialized[selector]) {
-            initialized[selector].disconnect();
-        }
-
-        $(document).trigger('dcat:init:off', selector, initialized[selector])
-
-        initialized[selector] = null;
-    }
-
-    /**
      * 主动触发 ready 事件
      */
     triggerReady() {
-        if (! waiting) {
+        if (! pjaxResponded) {
             return;
         }
 
         $(() => {
-            $document.trigger('pjax:loaded');
+            $(document).trigger('pjax:loaded');
         });
     }
 
     /**
-     * 等待JS脚本加载完成
+     * 如果是 pjax 响应的页面，需要调用此方法
      *
      * @returns {Dcat}
      */
-    wait(value) {
-        waiting = value !== false;
-
-        $document.trigger('dcat:waiting');
+    pjaxResponded(value) {
+        pjaxResponded = value !== false;
 
         return this
     }
@@ -214,10 +155,10 @@ export default class Dcat {
         once = once === undefined ? true : once;
 
         if (once) {
-            return $document.one('pjax:loaded', callback);
+            return $(document).one('pjax:loaded', callback);
         }
 
-        return $document.on('pjax:loaded', callback);
+        return $(document).on('pjax:loaded', callback);
     }
 
     /**
@@ -231,10 +172,10 @@ export default class Dcat {
         once = once === undefined ? true : once;
 
         if (once) {
-            return $document.one('pjax:complete', callback);
+            return $(document).one('pjax:complete', callback);
         }
 
-        return $document.on('pjax:complete', callback);
+        return $(document).on('pjax:complete', callback);
     }
 
     withConfig(config) {

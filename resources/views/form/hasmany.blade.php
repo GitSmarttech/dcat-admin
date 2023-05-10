@@ -1,20 +1,22 @@
 
-<div class="row" style="margin-top: 10px;">
+<div class="row">
     <div class="{{$viewClass['label']}}"><h4 class="pull-right">{!! $label !!}</h4></div>
     <div class="{{$viewClass['field']}}"></div>
 </div>
 
-<hr class="mt-0">
+<hr style="margin-top: 0px;">
 
-<div class="has-many-{{$columnClass}}">
+<div class="has-many-{{$column}}">
 
-    <div class="has-many-{{$columnClass}}-forms">
+    <div class="has-many-{{$column}}-forms">
 
         @foreach($forms as $pk => $form)
 
-            <div class="has-many-{{$columnClass}}-form fields-group">
+            <div class="has-many-{{$column}}-form fields-group">
 
-                {!! $form->render() !!}
+                @foreach($form->fields() as $field)
+                    {!! $field->render() !!}
+                @endforeach
 
                 @if($options['allowDelete'])
                 <div class="form-group row">
@@ -29,10 +31,10 @@
 
         @endforeach
     </div>
+    
 
-
-    <template class="{{$columnClass}}-tpl">
-        <div class="has-many-{{$columnClass}}-form fields-group">
+    <template class="{{$column}}-tpl">
+        <div class="has-many-{{$column}}-form fields-group">
 
             {!! $template !!}
 
@@ -56,30 +58,3 @@
     @endif
 
 </div>
-
-<script>
-    var nestedIndex = {!! $count !!},
-        container = '.has-many-{{ $columnClass }}',
-        forms = '.has-many-{{ $columnClass  }}-forms';
-
-    function replaceNestedFormIndex(value) {
-        return String(value).replace(/{{ Dcat\Admin\Form\NestedForm::DEFAULT_KEY_NAME }}/g, nestedIndex);
-    }
-
-    $(container).on('click', '.add', function () {
-
-        var tpl = $('template.{{ $columnClass }}-tpl');
-
-        nestedIndex++;
-
-        var template = replaceNestedFormIndex(tpl.html());
-        $(forms).append(template);
-    });
-
-    $(container).on('click', '.remove', function () {
-        var $form = $(this).closest('.has-many-{{ $columnClass  }}-form');
-        $form.hide();
-        $form.find('.{{ Dcat\Admin\Form\NestedForm::REMOVE_FLAG_CLASS }}').val(1);
-        $form.find('[required]').prop('required', false);
-    });
-</script>

@@ -13,12 +13,9 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Illuminate\Support\Traits\Macroable;
 
 class Tools implements Renderable
 {
-    use Macroable;
-
     /**
      * Parent grid.
      *
@@ -57,16 +54,9 @@ class Tools implements Renderable
      */
     protected function appendDefaultTools()
     {
-        $this->append($this->makeBatchActions())
+        $this->append(new BatchActions())
             ->append(new RefreshButton())
             ->append(new FilterButton());
-    }
-
-    protected function makeBatchActions()
-    {
-        $class = $this->grid->option('batch_actions_class') ?: (config('admin.grid.batch_action_class') ?: BatchActions::class);
-
-        return new $class();
     }
 
     /**
@@ -245,7 +235,7 @@ class Tools implements Renderable
             return $value;
         }
 
-        return preg_replace_callback('/class=[\'|"]([a-z0-9A-Z-_\s]*)[\'|"]/', function ($text) {
+        return preg_replace_callback('/class=[\'|"]([a-z0-9A-Z-_\s]*)[\'|"]/', function (&$text) {
             $class = array_filter(explode(' ', $text[1]));
 
             if (

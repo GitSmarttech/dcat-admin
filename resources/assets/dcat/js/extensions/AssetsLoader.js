@@ -7,10 +7,10 @@ export default class AssetsLoader {
 
         Dcat.assets = {
             // 加载js脚本，并触发 ready 事件
-            load: _this.load.bind(_this),
+            loadScripts: _this.load.bind(_this),
 
             // 从给定的内容中过滤"<script>"标签内容，并自动加载其中的js脚本
-            resolveHtml: _this.resolveHtml.bind(_this)
+            executeScripts: _this.executeScripts.bind(_this)
         };
     }
 
@@ -30,7 +30,7 @@ export default class AssetsLoader {
             _this.load(urls, callback, args);
         });
     }
-
+    
     // 过滤 <script src> 标签
     filterScripts(content) {
         var obj = {};
@@ -56,9 +56,9 @@ export default class AssetsLoader {
 
         return obj;
     }
-
+    
     // 返回过滤 <script src> 标签后的内容，并在加载完 script 脚本后触发 "pjax:script" 事件
-    resolveHtml(content, callback) {
+    executeScripts(content, callback) {
         var obj = this.filterScripts(content);
 
         this.load(obj.js, function () {
@@ -68,16 +68,16 @@ export default class AssetsLoader {
         return obj.contents;
     }
 
-    findAll($el, selector) {
-        if (typeof $el === 'string') {
-            $el = $($el);
+    findAll(elems, selector) {
+        if (typeof elems == 'string') {
+            elems = $(elems);
         }
 
-        return $el.filter(selector).add($el.find(selector));
+        return elems.filter(selector).add(elems.find(selector));
     }
 
     fire() {
-        this.dcat.wait();
+        this.dcat.pjaxResponded();
 
         // js加载完毕 触发 ready 事件
         // setTimeout用于保证在所有js代码最后执行

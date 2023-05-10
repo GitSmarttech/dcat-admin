@@ -9,13 +9,10 @@ use Dcat\Admin\Widgets\Radio as WidgetRadio;
 class Radio extends Field
 {
     use CanCascadeFields;
-    use CanLoadFields;
 
     protected $style = 'primary';
 
     protected $cascadeEvent = 'change';
-
-    protected $inline = true;
 
     /**
      * @param array|\Closure|string $options
@@ -31,13 +28,6 @@ class Radio extends Field
         }
 
         $this->options = Helper::array($options);
-
-        return $this;
-    }
-
-    public function inline(bool $inline)
-    {
-        $this->inline = $inline;
 
         return $this;
     }
@@ -76,8 +66,8 @@ class Radio extends Field
         }
 
         $radio
-            ->inline($this->inline)
-            ->check($this->value())
+            ->inline()
+            ->check(old($this->column, $this->value()))
             ->class($this->getElementClassString());
 
         $this->addVariables([

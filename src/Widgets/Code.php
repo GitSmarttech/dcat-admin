@@ -2,6 +2,8 @@
 
 namespace Dcat\Admin\Widgets;
 
+use Illuminate\Contracts\Support\Renderable;
+
 class Code extends Markdown
 {
     /**
@@ -14,20 +16,20 @@ class Code extends Markdown
      * @param int    $start
      * @param int    $end
      */
-    public function __construct($content = '', int $start = 1, int $end = 1000)
+    public function __construct($content = '', int $start = 1, int $end = 10)
     {
         if (is_array($content) || is_object($content)) {
             $content = json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         } elseif (is_file($content)) {
-            $this->readFileContent($content, $start, $end);
-            $content = null;
+            $this->read($content, $start, $end);
+            $content = '';
         }
 
         parent::__construct($content);
     }
 
     /**
-     * 设置语言.
+     * 设置语言
      *
      * @param string $lang
      *
@@ -42,22 +44,30 @@ class Code extends Markdown
 
     public function javascript()
     {
-        return $this->lang('javascript');
+        $this->lang = 'javascript';
+
+        return $this;
     }
 
-    public function asHtml()
+    public function html()
     {
-        return $this->lang('html');
+        $this->lang = 'html';
+
+        return $this;
     }
 
     public function java()
     {
-        return $this->lang('java');
+        $this->lang = 'java';
+
+        return $this;
     }
 
     public function python()
     {
-        return $this->lang('python');
+        $this->lang = 'python';
+
+        return $this;
     }
 
     /**
@@ -69,9 +79,9 @@ class Code extends Markdown
      *
      * @return $this
      */
-    public function section($file, $lineNumber = 1, $context = 5)
+    public function padding($file, $lineNumber = 1, $padding = 5)
     {
-        return $this->readFileContent($file, $lineNumber - $context, $lineNumber + $context);
+        return $this->read($file, $lineNumber - $padding, $lineNumber + $padding);
     }
 
     /**
@@ -83,7 +93,7 @@ class Code extends Markdown
      *
      * @return $this
      */
-    public function readFileContent($file, $start = 1, $end = 10)
+    public function read($file, $start = 1, $end = 10)
     {
         if (! $file or ! is_readable($file) || $end < $start) {
             return $this;
@@ -108,14 +118,18 @@ class Code extends Markdown
         return $this->content($source);
     }
 
-    protected function renderContent()
+    protected function build()
     {
-        $content = parent::renderContent();
+        if ($this->content instanceof Renderable) {
+            $this->content = $this->content->render();
+        }
 
         return <<<EOF
+<div {$this->formatHtmlAttributes()}><textarea style="display:none;">
 ```{$this->lang}
-{$content}
+{$this->content}
 ```
+</textarea></div>
 EOF;
     }
 }

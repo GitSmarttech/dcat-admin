@@ -62,8 +62,8 @@ trait BrowserExtension
 
                 $isHidden = $this->script(
                     <<<JS
-var display = $('{$fullSelector}').css('display');
-
+var display = $('{$fullSelector}').css('display');                    
+                    
 return display === 'none' || $('{$fullSelector}').is(':hidden');
 JS
                 );
@@ -128,16 +128,7 @@ JS
             'scrollToBottom' => function () {
                 $this->script(
                     <<<'JS'
-$(document).scrollTop($(document).height() - $(window).height());
-JS
-                );
-
-                return $this;
-            },
-            'scrollToTop' => function () {
-                $this->script(
-                    <<<'JS'
-$(document).scrollTop(0);
+            $(document).scrollTop($(document).height() - $(window).height()); 
 JS
                 );
 
@@ -152,8 +143,7 @@ JS
 
     public function makeDelayBrowser($browser)
     {
-        return new class($browser)
-        {
+        return new class($browser) {
             protected $browser;
 
             protected $callbacks = [];

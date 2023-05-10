@@ -2,13 +2,16 @@
 
 namespace Dcat\Admin\Traits;
 
-use Dcat\Admin\Admin;
 use Dcat\Admin\Form\Field\File;
-use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Support\WebUploader;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * 文件上传辅助功能.
+ *
+ * Trait HasUploadedFile
+ */
 trait HasUploadedFile
 {
     /**
@@ -28,7 +31,7 @@ trait HasUploadedFile
      */
     public function file()
     {
-        return $this->uploader()->getUploadedFile();
+        return $this->uploader()->getCompleteUploadedFile();
     }
 
     /**
@@ -88,16 +91,16 @@ trait HasUploadedFile
      *
      * @param string $path 文件完整路径
      * @param string $url
-     *
-     * @return mixed
+     * @return \Illuminate\Http\JsonResponse
      */
     public function responseUploaded(string $path, string $url)
     {
-        return Admin::json([
-            'id'   => $path,
-            'name' => Helper::basename($path),
-            'path' => Helper::basename($path),
-            'url'  => $url,
+        return response()->json([
+            'status' => true,
+            'id'     => $path,
+            'name'   => basename($path),
+            'path'   => basename($path),
+            'url'    => $url,
         ]);
     }
 
@@ -106,11 +109,11 @@ trait HasUploadedFile
      *
      * @param mixed $message
      *
-     * @return mixed
+     * @return \Illuminate\Http\JsonResponse
      */
     public function responseValidationMessage($message)
     {
-        return $this->responseErrorMessage($message);
+        return $this->responseErrorMessage($message, 103);
     }
 
     /**
@@ -119,21 +122,23 @@ trait HasUploadedFile
      * @param $error
      * @param $code
      *
-     * @return mixed
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function responseErrorMessage($error)
+    public function responseErrorMessage($error, $code = 107)
     {
-        return Admin::json()->error($error);
+        return response()->json([
+            'error' => ['code' => $code, 'message' => $error], 'status' => false,
+        ]);
     }
 
     /**
      * 文件删除成功.
      *
-     * @return mixed
+     * @return \Illuminate\Http\JsonResponse
      */
     public function responseDeleted()
     {
-        return Admin::json();
+        return response()->json(['status' => true]);
     }
 
     /**
@@ -143,8 +148,8 @@ trait HasUploadedFile
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function responseDeleteFailed($message = '')
+    public function responseDeleteFail($message = '')
     {
-        return $this->responseErrorMessage($message);
+        return response()->json(['status' => false, 'message' => $message]);
     }
 }

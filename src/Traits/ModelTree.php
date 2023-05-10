@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Traits;
 
-use Dcat\Admin\Exception\AdminException;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Tree;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,7 +14,6 @@ use Spatie\EloquentSortable\SortableTrait;
  * @property string $parentColumn
  * @property string $titleColumn
  * @property string $orderColumn
- * @property string $defaultParentId
  * @property array  $sortable
  */
 trait ModelTree
@@ -31,6 +29,26 @@ trait ModelTree
      * @var \Closure[]
      */
     protected $queryCallbacks = [];
+
+    /**
+     * Get children of current node.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function children()
+    {
+        return $this->hasMany(static::class, $this->getParentColumn());
+    }
+
+    /**
+     * Get parent of current node.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function parent()
+    {
+        return $this->belongsTo(static::class, $this->getParentColumn());
+    }
 
     /**
      * @return string
@@ -61,14 +79,6 @@ trait ModelTree
     }
 
     /**
-     * @return string
-     */
-    public function getDefaultParentId()
-    {
-        return isset($this->defaultParentId) ? $this->defaultParentId : '0';
-    }
-
-    /**
      * Set query callback to model.
      *
      * @param \Closure|null $query
@@ -95,7 +105,7 @@ trait ModelTree
 
         return Helper::buildNestedArray(
             $nodes,
-            $this->getDefaultParentId(),
+            0,
             $this->getKeyName(),
             $this->getParentColumn()
         );
@@ -104,13 +114,14 @@ trait ModelTree
     /**
      * Get all elements.
      *
-     * @return static[]|\Illuminate\Support\Collection
+     * @return mixed
      */
     public function allNodes()
     {
         return $this->callQueryCallbacks(new static())
             ->orderBy($this->getOrderColumn(), 'asc')
-            ->get();
+            ->get()
+            ->toArray();
     }
 
     /**
@@ -293,32 +304,28 @@ trait ModelTree
      * @param array  $nodes
      * @param int    $parentId
      * @param string $prefix
-     * @param string $space
      *
      * @return array
      */
-    protected function buildSelectOptions(array $nodes = [], $parentId = 0, $prefix = '', $space = '&nbsp;')
+    protected function buildSelectOptions(array $nodes = [], $parentId = 0, $prefix = '')
     {
-        $d = '├─';
-        $prefix = $prefix ?: $d.$space;
+        $prefix = $prefix ?: str_repeat('&nbsp;', 6);
 
         $options = [];
 
         if (empty($nodes)) {
-            $nodes = $this->allNodes()->toArray();
+            $nodes = $this->allNodes();
         }
 
-        foreach ($nodes as $index => $node) {
-            if ($node[$this->getParentColumn()] == $parentId) {
-                $currentPrefix = $this->hasNextSibling($nodes, $node[$this->getParentColumn()], $index) ? $prefix : str_replace($d, '└─', $prefix);
+        $titleColumn = $this->getTitleColumn();
+        $parentColumn = $this->getParentColumn();
 
-                $node[$this->getTitleColumn()] = $currentPrefix.$space.$node[$this->getTitleColumn()];
+        foreach ($nodes as $node) {
+            $node[$titleColumn] = $prefix.'&nbsp;'.$node[$titleColumn];
+            if ($node[$parentColumn] == $parentId) {
+                $children = $this->buildSelectOptions($nodes, $node[$this->getKeyName()], $prefix.$prefix);
 
-                $childrenPrefix = str_replace($d, str_repeat($space, 6), $prefix).$d.str_replace([$d, $space], '', $prefix);
-
-                $children = $this->buildSelectOptions($nodes, $node[$this->getKeyName()], $childrenPrefix);
-
-                $options[$node[$this->getKeyName()]] = $node[$this->getTitleColumn()];
+                $options[$node[$this->getKeyName()]] = $node[$titleColumn];
 
                 if ($children) {
                     $options += $children;
@@ -329,13 +336,14 @@ trait ModelTree
         return $options;
     }
 
-    protected function hasNextSibling($nodes, $parentId, $index)
+    /**
+     * {@inheritdoc}
+     */
+    public function delete()
     {
-        foreach ($nodes as $i => $node) {
-            if ($node[$this->getParentColumn()] == $parentId && $i > $index) {
-                return true;
-            }
-        }
+        $this->where($this->getParentColumn(), $this->getKey())->delete();
+
+        return parent::delete();
     }
 
     /**
@@ -353,30 +361,20 @@ trait ModelTree
                 && Request::has($parentColumn)
                 && Request::input($parentColumn) == $branch->getKey()
             ) {
-                throw new AdminException(trans('admin.parent_select_error'));
+                throw new \Exception(trans('admin.parent_select_error'));
             }
 
-            if (Request::has(Tree::SAVE_ORDER_NAME)) {
-                $order = Request::input(Tree::SAVE_ORDER_NAME);
+            if (Request::has('_order')) {
+                $order = Request::input('_order');
 
-                Request::offsetUnset(Tree::SAVE_ORDER_NAME);
+                Request::offsetUnset('_order');
 
                 Tree::make(new static())->saveOrder($order);
-
-                $branch->{$branch->getKeyName()} = true;
 
                 return false;
             }
 
             return $branch;
-        });
-
-        static::deleting(function ($model) {
-            static::query()
-                ->where($model->getParentColumn(), $model->getKey())
-                ->get()
-                ->each
-                ->delete();
         });
     }
 }

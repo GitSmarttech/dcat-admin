@@ -106,7 +106,7 @@ class Selector
      */
     public function getQueryName()
     {
-        return $this->grid->makeName($this->queryNameSuffix);
+        return $this->grid->getName().$this->queryNameSuffix;
     }
 
     /**
@@ -147,10 +147,6 @@ class Selector
 
         foreach ($selected as &$value) {
             $value = explode(',', $value);
-
-            foreach ($value as &$v) {
-                $v = (string) $v;
-            }
         }
 
         return $this->selected = $selected;
@@ -186,8 +182,8 @@ class Selector
             return $this->request->fullUrlWithQuery($query);
         }
 
-        if (in_array((string) $value, $options, true)) {
-            Helper::deleteByValue($options, (string) $value, true);
+        if (in_array($value, $options)) {
+            Helper::deleteByValue($options, $value);
         } else {
             if ($add) {
                 $options = [];

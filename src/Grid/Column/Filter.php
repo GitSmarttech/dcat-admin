@@ -3,7 +3,6 @@
 namespace Dcat\Admin\Grid\Column;
 
 use Dcat\Admin\Grid\Column;
-use Dcat\Admin\Grid\Events\Fetching;
 use Dcat\Admin\Grid\Model;
 use Dcat\Admin\Support\Helper;
 use Illuminate\Contracts\Support\Renderable;
@@ -42,7 +41,7 @@ abstract class Filter implements Renderable
     {
         $this->parent = $column;
 
-        $this->parent->grid()->listen(Fetching::class, function () {
+        $this->parent->grid()->fetching(function () {
             $this->addResetButton();
 
             $this->parent->grid()->model()->treeUrlWithoutQuery(
@@ -110,9 +109,9 @@ abstract class Filter implements Renderable
      */
     public function getQueryName()
     {
-        return $this->parent->grid()->makeName(
-            'filter-'.$this->getColumnName()
-        );
+        return $this->parent->grid()->getName().
+            '_filter_'.
+            $this->getColumnName();
     }
 
     /**

@@ -63,10 +63,10 @@ HTML;
     }
 
     /**
-     * @return string
+     * @return void
      */
     public function end()
     {
-        return '</div>';
+        $this->form->html('</div>')->plain();
     }
 }

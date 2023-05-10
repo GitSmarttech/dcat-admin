@@ -2,16 +2,19 @@
 
 namespace Tests\Controllers;
 
+use App\Http\Controllers\Controller;
+use Dcat\Admin\Controllers\HasResourceActions;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
-use Dcat\Admin\Http\Controllers\AdminController;
 use Dcat\Admin\Layout\Content;
 use Dcat\Admin\Show;
 use Tests\Models\Tag;
 use Tests\Repositories\User;
 
-class UserController extends AdminController
+class UserController extends Controller
 {
+    use HasResourceActions;
+
     /**
      * Index interface.
      *
@@ -32,7 +35,7 @@ class UserController extends AdminController
      *
      * @return Content
      */
-    public function edit($id, Content $content)
+    public function edit(Content $content, $id)
     {
         $content->header('Edit user');
         $content->description('description');
@@ -81,18 +84,16 @@ class UserController extends AdminController
 
         $grid->model()->with(['tags', 'profile']);
 
-        $grid->number();
-
         $grid->id('ID')->sortable();
 
         $grid->username();
         $grid->email();
         $grid->mobile();
-        $grid->full_name;
+        $grid->full_name();
         $grid->avatar()->display(function ($avatar) {
             return "<img src='{$avatar}' />";
         });
-        $grid->column('profile.postcode', 'Post code')->sortable('SIGNED');
+        $grid->column('profile.postcode', 'Post code');
         $grid->column('profile.address');
         $grid->column('profile.color');
         $grid->column('profile.start_at', '开始时间');
@@ -117,13 +118,11 @@ class UserController extends AdminController
         $grid->created_at();
         $grid->updated_at();
 
-        $grid->quickSearch('profile.postcode', 'username');
-
         $grid->filter(function (Grid\Filter $filter) {
             $filter->equal('id');
             $filter->like('username');
             $filter->like('email');
-            $filter->equal('profile.postcode');
+            $filter->like('profile.postcode');
             $filter->between('profile.start_at')->datetime();
             $filter->between('profile.end_at')->datetime();
         });

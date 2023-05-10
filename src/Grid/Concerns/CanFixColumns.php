@@ -29,14 +29,9 @@ trait CanFixColumns
         return $this->fixColumns;
     }
 
-    public function hasFixColumns()
-    {
-        return $this->fixColumns;
-    }
-
     protected function resetActions()
     {
-        $actions = $this->getActionClass();
+        $actions = $this->actionsClass ?: config('admin.grid.grid_action_class');
 
         if ($actions === DropdownActions::class) {
             $this->setActionClass(Actions::class);
@@ -46,7 +41,7 @@ trait CanFixColumns
     protected function applyFixColumns()
     {
         if ($this->fixColumns) {
-            if (! $this->options['bordered'] && ! $this->options['table_collapse']) {
+            if (! $this->options['show_bordered'] && ! $this->options['table_collapse']) {
                 $this->tableCollapse();
             }
 

@@ -3,67 +3,70 @@
 namespace Dcat\Admin;
 
 use Closure;
-use Dcat\Admin\Contracts\ExceptionHandler;
 use Dcat\Admin\Contracts\Repository;
-use Dcat\Admin\Exception\InvalidArgumentException;
-use Dcat\Admin\Http\Controllers\AuthController;
-use Dcat\Admin\Http\JsonResponse;
+use Dcat\Admin\Controllers\AuthController;
+use Dcat\Admin\Exception\Handler;
+use Dcat\Admin\Layout\Content;
 use Dcat\Admin\Layout\Menu;
 use Dcat\Admin\Layout\Navbar;
 use Dcat\Admin\Layout\SectionManager;
 use Dcat\Admin\Repositories\EloquentRepository;
-use Dcat\Admin\Support\Composer;
+use Dcat\Admin\Repositories\Proxy;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasAssets;
-use Dcat\Admin\Traits\HasHtml;
 use Dcat\Admin\Traits\HasPermissions;
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Fluent;
+use Illuminate\Support\Str;
 
+/**
+ * Class Admin.
+ */
 class Admin
 {
     use HasAssets;
-    use HasHtml;
 
-    const VERSION = '2.1.0-beta';
+    /**
+     * 版本号.
+     *
+     * @var string
+     */
+    const VERSION = '1.7.4';
 
-    const SECTION = [
-        // 往 <head> 标签内输入内容
-        'HEAD' => 'ADMIN_HEAD',
+    /**
+     * @var array
+     */
+    protected static $extensions = [];
 
-        // 往body标签内部输入内容
-        'BODY_INNER_BEFORE' => 'ADMIN_BODY_INNER_BEFORE',
-        'BODY_INNER_AFTER' => 'ADMIN_BODY_INNER_AFTER',
+    /**
+     * @var array
+     */
+    protected static $availableExtensions;
 
-        // 往#app内部输入内容
-        'APP_INNER_BEFORE' => 'ADMIN_APP_INNER_BEFORE',
-        'APP_INNER_AFTER' => 'ADMIN_APP_INNER_AFTER',
+    /**
+     * @var string
+     */
+    protected static $metaTitle;
 
-        // 顶部导航栏用户面板
-        'NAVBAR_USER_PANEL' => 'ADMIN_NAVBAR_USER_PANEL',
-        'NAVBAR_AFTER_USER_PANEL' => 'ADMIN_NAVBAR_AFTER_USER_PANEL',
-        // 顶部导航栏之前
-        'NAVBAR_BEFORE' => 'ADMIN_NAVBAR_BEFORE',
-        // 顶部导航栏底下
-        'NAVBAR_AFTER' => 'ADMIN_NAVBAR_AFTER',
+    /**
+     * @var string
+     */
+    protected static $favicon;
 
-        // 侧边栏顶部用户信息面板
-        'LEFT_SIDEBAR_USER_PANEL' => 'ADMIN_LEFT_SIDEBAR_USER_PANEL',
-        // 菜单栏
-        'LEFT_SIDEBAR_MENU' => 'ADMIN_LEFT_SIDEBAR_MENU',
-        // 菜单栏顶部
-        'LEFT_SIDEBAR_MENU_TOP' => 'ADMIN_LEFT_SIDEBAR_MENU_TOP',
-        // 菜单栏底部
-        'LEFT_SIDEBAR_MENU_BOTTOM' => 'ADMIN_LEFT_SIDEBAR_MENU_BOTTOM',
-    ];
+    /**
+     * @var array
+     */
+    public static $jsVariables = [];
 
-    private static $defaultPjaxContainerId = 'pjax-container';
+    /**
+     * @var string
+     */
+    public static $pjaxContainerId = 'pjax-container';
 
     /**
      * 版本.
@@ -107,10 +110,10 @@ class Admin
     public static function title($title = null)
     {
         if ($title === null) {
-            return static::context()->metaTitle ?: config('admin.title');
+            return static::$metaTitle ?: config('admin.title');
         }
 
-        static::context()->metaTitle = $title;
+        static::$metaTitle = $title;
     }
 
     /**
@@ -120,21 +123,22 @@ class Admin
      */
     public static function favicon($favicon = null)
     {
-        if ($favicon === null) {
-            return static::context()->favicon;
+        if (is_null($favicon)) {
+            return static::$favicon;
         }
 
-        static::context()->favicon = $favicon;
+        static::$favicon = $favicon;
     }
 
     /**
-     * 设置翻译文件路径.
+     * @param Closure $callable
      *
-     * @param string|null $path
+     * @return Content
+     * @deprecated
      */
-    public static function translation(?string $path)
+    public static function content(Closure $callable = null)
     {
-        static::context()->translation = $path;
+        return new Content($callable);
     }
 
     /**
@@ -170,41 +174,11 @@ class Admin
     }
 
     /**
-     * 启用或禁用Pjax.
-     *
-     * @param bool $value
-     *
-     * @return void
-     */
-    public static function pjax(bool $value = true)
-    {
-        static::context()->pjaxContainerId = $value ? static::$defaultPjaxContainerId : false;
-    }
-
-    /**
      * 禁用pjax.
-     *
-     * @return void
      */
     public static function disablePjax()
     {
-        static::pjax(false);
-    }
-
-    /**
-     * 获取pjax ID.
-     *
-     * @return string|void
-     */
-    public static function getPjaxContainerId()
-    {
-        $id = static::context()->pjaxContainerId;
-
-        if ($id === false) {
-            return;
-        }
-
-        return $id ?: static::$defaultPjaxContainerId;
+        static::$pjaxContainerId = null;
     }
 
     /**
@@ -224,13 +198,103 @@ class Admin
     }
 
     /**
-     * 配置.
+     * 注册路由.
      *
-     * @return \Dcat\Admin\Support\Setting
+     * @return void
      */
-    public static function setting()
+    public static function routes()
     {
-        return app('admin.setting');
+        $attributes = [
+            'prefix'     => config('admin.route.prefix'),
+            'middleware' => config('admin.route.middleware'),
+            'as'         => static::app()->getName().'.',
+        ];
+
+        if (config('admin.auth.enable', true)) {
+            app('router')->group($attributes, function ($router) {
+                /* @var \Illuminate\Routing\Router $router */
+                $router->namespace('Dcat\Admin\Controllers')->group(function ($router) {
+                    /* @var \Illuminate\Routing\Router $router */
+                    $router->resource('auth/users', 'UserController');
+                    $router->resource('auth/menu', 'MenuController', ['except' => ['create', 'show']]);
+                    $router->resource('auth/logs', 'LogController', ['only' => ['index', 'destroy']]);
+
+                    if (config('admin.permission.enable')) {
+                        $router->resource('auth/roles', 'RoleController');
+                        $router->resource('auth/permissions', 'PermissionController');
+                    }
+                });
+
+                $authController = config('admin.auth.controller', AuthController::class);
+
+                $router->get('auth/login', $authController.'@getLogin');
+                $router->post('auth/login', $authController.'@postLogin');
+                $router->get('auth/logout', $authController.'@getLogout');
+                $router->get('auth/setting', $authController.'@getSetting');
+                $router->put('auth/setting', $authController.'@putSetting');
+            });
+        }
+
+        static::registerHelperRoutes();
+    }
+
+    /**
+     * 注册api路由.
+     *
+     * @param string $as
+     *
+     * @return void
+     */
+    public static function registerApiRoutes(string $as = null)
+    {
+        $attributes = [
+            'prefix'     => admin_base_path('dcat-api'),
+            'middleware' => config('admin.route.middleware'),
+            'as'         => $as ?: static::app()->getApiRoutePrefix(Application::DEFAULT),
+        ];
+
+        app('router')->group($attributes, function ($router) {
+            /* @var \Illuminate\Routing\Router $router */
+            $router->namespace('Dcat\Admin\Controllers')->group(function ($router) {
+                /* @var \Illuminate\Routing\Router $router */
+                $router->post('action', 'HandleActionController@handle')->name('action');
+                $router->post('form', 'HandleFormController@handle')->name('form');
+                $router->post('form/upload', 'HandleFormController@uploadFile')->name('form.upload');
+                $router->post('form/destroy-file', 'HandleFormController@destroyFile')->name('form.destroy-file');
+                $router->post('value', 'ValueController@handle')->name('value');
+                $router->get('render', 'RenderableController@handle')->name('render');
+                $router->post('tinymce/upload', 'TinymceController@upload')->name('tinymce.upload');
+                $router->post('editor-md/upload', 'EditorMDController@upload')->name('editor-md.upload');
+            });
+        });
+    }
+
+    /**
+     * 注册开发工具路由.
+     *
+     * @return void
+     */
+    public static function registerHelperRoutes()
+    {
+        if (! config('admin.helpers.enable', true) || ! config('app.debug')) {
+            return;
+        }
+
+        $attributes = [
+            'prefix'     => config('admin.route.prefix'),
+            'middleware' => config('admin.route.middleware'),
+            'as'         => static::app()->getName().'.',
+        ];
+
+        app('router')->group($attributes, function ($router) {
+            /* @var \Illuminate\Routing\Router $router */
+            $router->get('helpers/scaffold', 'Dcat\Admin\Controllers\ScaffoldController@index');
+            $router->post('helpers/scaffold', 'Dcat\Admin\Controllers\ScaffoldController@store');
+            $router->post('helpers/scaffold/table', 'Dcat\Admin\Controllers\ScaffoldController@table');
+            $router->get('helpers/icons', 'Dcat\Admin\Controllers\IconController@index');
+            $router->resource('helpers/extensions', 'Dcat\Admin\Controllers\ExtensionController', ['only' => ['index', 'store', 'update']]);
+            $router->post('helpers/extensions/import', 'Dcat\Admin\Controllers\ExtensionController@import');
+        });
     }
 
     /**
@@ -254,15 +318,17 @@ class Admin
         if (! $repository instanceof Repository) {
             $class = is_object($repository) ? get_class($repository) : $repository;
 
-            throw new InvalidArgumentException("The class [{$class}] must be a type of [".Repository::class.'].');
+            throw new \InvalidArgumentException("The class [{$class}] must be a type of [".Repository::class.'].');
         }
 
-        return $repository;
+        if ($repository instanceof Proxy) {
+            return $repository;
+        }
+
+        return new Proxy($repository);
     }
 
     /**
-     * 应用管理.
-     *
      * @return Application
      */
     public static function app()
@@ -271,39 +337,95 @@ class Admin
     }
 
     /**
-     * 处理异常.
+     * 获取所有已注册的扩展.
      *
-     * @param \Throwable $e
-     *
-     * @return mixed
+     * @return array
      */
-    public static function handleException(\Throwable $e)
+    public static function extensions()
     {
-        return app(ExceptionHandler::class)->handle($e);
+        return static::$extensions;
     }
 
     /**
-     * 上报异常.
+     * 获取所有可用扩展.
      *
-     * @param \Throwable $e
-     *
-     * @return mixed
+     * @return Extension[]
      */
-    public static function reportException(\Throwable $e)
+    public static function availableExtensions()
     {
-        return app(ExceptionHandler::class)->report($e);
+        if (static::$availableExtensions !== null) {
+            return static::$availableExtensions;
+        }
+
+        static::$availableExtensions = [];
+        foreach (static::$extensions as $k => $extension) {
+            if (! config("admin-extensions.{$k}.enable")) {
+                continue;
+            }
+
+            static::$availableExtensions[$k] = $extension::make();
+        }
+
+        return static::$availableExtensions;
     }
 
     /**
-     * 显示异常信息.
+     * 注册扩展.
      *
-     * @param \Throwable $e
+     * @param string $class
      *
-     * @return mixed
+     * @return void
      */
-    public static function renderException(\Throwable $e)
+    public static function extend(string $class)
     {
-        return app(ExceptionHandler::class)->render($e);
+        static::$extensions[$class::NAME] = $class;
+    }
+
+    /**
+     * 启用扩展.
+     *
+     * @param string $class
+     * @param bool   $enable
+     *
+     * @return bool
+     */
+    public static function enableExtenstion(string $class, bool $enable = true)
+    {
+        if (! $class || ! is_subclass_of($class, Extension::class)) {
+            return false;
+        }
+
+        $name = $class::NAME;
+
+        $config = (array) config('admin-extensions');
+
+        $config[$name] = (array) ($config[$name] ?? []);
+
+        $config[$name]['enable'] = $enable;
+
+        return Helper::updateExtensionConfig($config);
+    }
+
+    /**
+     * 禁用扩展.
+     *
+     * @param string $class
+     *
+     * @return bool
+     */
+    public static function disableExtenstion(string $class)
+    {
+        return static::enableExtenstion($class, false);
+    }
+
+    /**
+     * @return Handler
+     */
+    public static function makeExceptionHandler()
+    {
+        return app(
+            config('admin.exception_handler') ?: Handler::class
+        );
     }
 
     /**
@@ -311,7 +433,7 @@ class Admin
      */
     public static function booting($callback)
     {
-        Event::listen('admin:booting', $callback);
+        Event::listen('admin.booting', $callback);
     }
 
     /**
@@ -319,7 +441,7 @@ class Admin
      */
     public static function booted($callback)
     {
-        Event::listen('admin:booted', $callback);
+        Event::listen('admin.booted', $callback);
     }
 
     /**
@@ -327,7 +449,7 @@ class Admin
      */
     public static function callBooting()
     {
-        Event::dispatch('admin:booting');
+        Event::dispatch('admin.booting');
     }
 
     /**
@@ -335,27 +457,15 @@ class Admin
      */
     public static function callBooted()
     {
-        Event::dispatch('admin:booted');
+        Event::dispatch('admin.booted');
     }
 
     /**
-     * 上下文管理.
-     *
-     * @return \Dcat\Admin\Support\Context
+     * @return Fluent
      */
     public static function context()
     {
         return app('admin.context');
-    }
-
-    /**
-     * 翻译器.
-     *
-     * @return \Dcat\Admin\Support\Translator
-     */
-    public static function translator()
-    {
-        return app('admin.translator');
     }
 
     /**
@@ -381,293 +491,22 @@ class Admin
     }
 
     /**
-     * 中断默认的渲染逻辑.
-     *
-     * @param string|\Illuminate\Contracts\Support\Renderable|\Closure $value
-     */
-    public static function prevent($value)
-    {
-        if ($value !== null) {
-            static::context()->add('contents', $value);
-        }
-    }
-
-    /**
-     * @return bool
-     */
-    public static function shouldPrevent()
-    {
-        return count(static::context()->getArray('contents')) > 0;
-    }
-
-    /**
-     * 渲染内容.
-     *
-     * @return string|void
-     */
-    public static function renderContents()
-    {
-        if (! static::shouldPrevent()) {
-            return;
-        }
-
-        $results = '';
-
-        foreach (static::context()->getArray('contents') as $content) {
-            $results .= Helper::render($content);
-        }
-
-        // 等待JS脚本加载完成
-        static::script('Dcat.wait()', true);
-
-        $asset = static::asset();
-
-        static::baseCss([], false);
-        static::baseJs([], false);
-        static::headerJs([], false);
-        static::fonts([]);
-
-        return $results
-            .static::html()
-            .$asset->jsToHtml()
-            .$asset->cssToHtml()
-            .$asset->scriptToHtml()
-            .$asset->styleToHtml();
-    }
-
-    /**
-     * 响应json数据.
-     *
-     * @param array $data
-     *
-     * @return JsonResponse
-     */
-    public static function json(array $data = [])
-    {
-        return JsonResponse::make($data);
-    }
-
-    /**
-     * 插件管理.
-     *
-     * @param string $name
-     *
-     * @return \Dcat\Admin\Extend\Manager|\Dcat\Admin\Extend\ServiceProvider|null
-     */
-    public static function extension(?string $name = null)
-    {
-        if ($name) {
-            return app('admin.extend')->get($name);
-        }
-
-        return app('admin.extend');
-    }
-
-    /**
-     * 响应并中断后续逻辑.
-     *
-     * @param Response|string|array $response
-     *
-     * @throws HttpResponseException
-     */
-    public static function exit($response = '')
-    {
-        if (is_array($response)) {
-            $response = response()->json($response);
-        } elseif ($response instanceof JsonResponse) {
-            $response = $response->send();
-        }
-
-        throw new HttpResponseException($response instanceof Response ? $response : response($response));
-    }
-
-    /**
-     * 类自动加载器.
-     *
-     * @return \Composer\Autoload\ClassLoader
-     */
-    public static function classLoader()
-    {
-        return Composer::loader();
-    }
-
-    /**
-     * 往分组插入中间件.
-     *
-     * @param array $mix
-     */
-    public static function mixMiddlewareGroup(array $mix = [])
-    {
-        $router = app('router');
-
-        $group = $router->getMiddlewareGroups()['admin'] ?? [];
-
-        if ($mix) {
-            $finalGroup = [];
-
-            foreach ($group as $i => $mid) {
-                $next = $i + 1;
-
-                $finalGroup[] = $mid;
-
-                if (! isset($group[$next]) || $group[$next] !== 'admin.permission') {
-                    continue;
-                }
-
-                $finalGroup = array_merge($finalGroup, $mix);
-
-                $mix = [];
-            }
-
-            if ($mix) {
-                $finalGroup = array_merge($finalGroup, $mix);
-            }
-
-            $group = $finalGroup;
-        }
-
-        $router->middlewareGroup('admin', $group);
-    }
-
-    /**
      * 获取js配置.
-     *
-     * @param array|null $variables
      *
      * @return string
      */
-    public static function jsVariables(array $variables = null)
+    public static function jsVariables()
     {
-        $jsVariables = static::context()->jsVariables ?: [];
-
-        if ($variables !== null) {
-            static::context()->jsVariables = array_merge(
-                $jsVariables,
-                $variables
-            );
-
-            return;
-        }
-
         $sidebarStyle = config('admin.layout.sidebar_style') ?: 'light';
 
-        $pjaxId = static::getPjaxContainerId();
+        static::$jsVariables['pjax_container_selector'] = '#'.static::$pjaxContainerId;
+        static::$jsVariables['token'] = csrf_token();
+        static::$jsVariables['lang'] = __('admin.client') ?: [];
+        static::$jsVariables['colors'] = static::color()->all();
+        static::$jsVariables['dark_mode'] = Str::contains(config('admin.layout.body_class'), 'dark-mode');
+        static::$jsVariables['sidebar_dark'] = config('admin.layout.sidebar_dark') || ($sidebarStyle === 'dark');
+        static::$jsVariables['sidebar_light_style'] = in_array($sidebarStyle, ['dark', 'light'], true) ? 'sidebar-light-primary' : 'sidebar-primary';
 
-        $jsVariables['pjax_container_selector'] = $pjaxId ? ('#'.$pjaxId) : '';
-        $jsVariables['token'] = csrf_token();
-        $jsVariables['lang'] = __('admin.client') ?: [];
-        $jsVariables['colors'] = static::color()->all();
-        $jsVariables['dark_mode'] = static::isDarkMode();
-        $jsVariables['sidebar_dark'] = config('admin.layout.sidebar_dark') || ($sidebarStyle === 'dark');
-        $jsVariables['sidebar_light_style'] = in_array($sidebarStyle, ['dark', 'light'], true) ? 'sidebar-light-primary' : 'sidebar-primary';
-
-        return admin_javascript_json($jsVariables);
-    }
-
-    /**
-     * @return bool
-     */
-    public static function isDarkMode()
-    {
-        $bodyClass = config('admin.layout.body_class');
-
-        return in_array(
-            'dark-mode',
-            is_array($bodyClass) ? $bodyClass : explode(' ', $bodyClass),
-            true
-        );
-    }
-
-    /**
-     * 注册路由.
-     *
-     * @return void
-     */
-    public static function routes()
-    {
-        $attributes = [
-            'prefix'     => config('admin.route.prefix'),
-            'middleware' => config('admin.route.middleware'),
-        ];
-
-        if (config('admin.auth.enable', true)) {
-            app('router')->group($attributes, function ($router) {
-                /* @var \Illuminate\Routing\Router $router */
-                $router->namespace('Dcat\Admin\Http\Controllers')->group(function ($router) {
-                    /* @var \Illuminate\Routing\Router $router */
-                    $router->resource('auth/users', 'UserController');
-                    $router->resource('auth/menu', 'MenuController', ['except' => ['create', 'show']]);
-
-                    if (config('admin.permission.enable')) {
-                        $router->resource('auth/roles', 'RoleController');
-                        $router->resource('auth/permissions', 'PermissionController');
-                    }
-                });
-
-                $router->resource('auth/extensions', 'Dcat\Admin\Http\Controllers\ExtensionController', ['only' => ['index', 'store', 'update']]);
-
-                $authController = config('admin.auth.controller', AuthController::class);
-
-                $router->get('auth/login', $authController.'@getLogin');
-                $router->post('auth/login', $authController.'@postLogin');
-                $router->get('auth/logout', $authController.'@getLogout');
-                $router->get('auth/setting', $authController.'@getSetting');
-                $router->put('auth/setting', $authController.'@putSetting');
-            });
-        }
-
-        static::registerHelperRoutes();
-    }
-
-    /**
-     * 注册api路由.
-     *
-     * @return void
-     */
-    public static function registerApiRoutes()
-    {
-        $attributes = [
-            'prefix'     => admin_base_path('dcat-api'),
-            'middleware' => config('admin.route.middleware'),
-            'namespace'  => 'Dcat\Admin\Http\Controllers',
-            'as'         => 'dcat-api.',
-        ];
-
-        app('router')->group($attributes, function ($router) {
-            /* @var \Illuminate\Routing\Router $router */
-            $router->post('action', 'HandleActionController@handle')->name('action');
-            $router->post('form', 'HandleFormController@handle')->name('form');
-            $router->post('form/upload', 'HandleFormController@uploadFile')->name('form.upload');
-            $router->post('form/destroy-file', 'HandleFormController@destroyFile')->name('form.destroy-file');
-            $router->post('value', 'ValueController@handle')->name('value');
-            $router->get('render', 'RenderableController@handle')->name('render');
-            $router->post('tinymce/upload', 'TinymceController@upload')->name('tinymce.upload');
-            $router->post('editor-md/upload', 'EditorMDController@upload')->name('editor-md.upload');
-        });
-    }
-
-    /**
-     * 注册开发工具路由.
-     *
-     * @return void
-     */
-    public static function registerHelperRoutes()
-    {
-        if (! config('admin.helpers.enable', true) || ! config('app.debug')) {
-            return;
-        }
-
-        $attributes = [
-            'prefix'     => config('admin.route.prefix'),
-            'middleware' => config('admin.route.middleware'),
-        ];
-
-        app('router')->group($attributes, function ($router) {
-            /* @var \Illuminate\Routing\Router $router */
-            $router->get('helpers/scaffold', 'Dcat\Admin\Http\Controllers\ScaffoldController@index');
-            $router->post('helpers/scaffold', 'Dcat\Admin\Http\Controllers\ScaffoldController@store');
-            $router->post('helpers/scaffold/table', 'Dcat\Admin\Http\Controllers\ScaffoldController@table');
-            $router->get('helpers/icons', 'Dcat\Admin\Http\Controllers\IconController@index');
-        });
+        return json_encode(static::$jsVariables);
     }
 }

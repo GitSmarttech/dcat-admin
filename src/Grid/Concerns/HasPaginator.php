@@ -7,11 +7,6 @@ use Dcat\Admin\Grid\Tools;
 trait HasPaginator
 {
     /**
-     * @var Tools\Paginator
-     */
-    protected $paginator;
-
-    /**
      * Per-page options.
      *
      * @var array
@@ -40,20 +35,6 @@ trait HasPaginator
     }
 
     /**
-     * 是否使用 simplePaginate 方法分页.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function simplePaginate(bool $value = true)
-    {
-        $this->model()->simple($value);
-
-        return $this;
-    }
-
-    /**
      * @return int
      */
     public function getPerPage()
@@ -62,31 +43,17 @@ trait HasPaginator
     }
 
     /**
-     * @param string $paginator
-     *
-     * @return $this
-     */
-    public function setPaginatorClass(string $paginator)
-    {
-        $this->options['paginator_class'] = $paginator;
-
-        return $this;
-    }
-
-    /**
      * Get the grid paginator.
      *
-     * @return \Dcat\Admin\Grid\Tools\Paginator
+     * @return mixed
      */
     public function paginator()
     {
-        if (! $this->paginator) {
-            $paginatorClass = $this->options['paginator_class'] ?: (config('admin.grid.paginator_class') ?: Tools\Paginator::class);
-
-            $this->paginator = new $paginatorClass($this);
+        if (! $this->options['show_pagination']) {
+            return;
         }
 
-        return $this->paginator;
+        return new Tools\Paginator($this);
     }
 
     /**
@@ -96,7 +63,7 @@ trait HasPaginator
      */
     public function allowPagination()
     {
-        return $this->options['pagination'];
+        return $this->options['show_pagination'];
     }
 
     /**
@@ -138,7 +105,7 @@ trait HasPaginator
     {
         $this->model->usePaginate(! $disable);
 
-        return $this->option('pagination', ! $disable);
+        return $this->option('show_pagination', ! $disable);
     }
 
     /**
@@ -151,13 +118,5 @@ trait HasPaginator
     public function showPagination(bool $val = true)
     {
         return $this->disablePagination(! $val);
-    }
-
-    /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\Contracts\View\View|\Illuminate\View\View|string
-     */
-    public function renderPagination()
-    {
-        return view('admin::grid.table-pagination', ['grid' => $this]);
     }
 }

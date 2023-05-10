@@ -3,6 +3,7 @@
 namespace DummyNamespace;
 
 use Dcat\Admin\Widgets\Form;
+use Symfony\Component\HttpFoundation\Response;
 
 class DummyClass extends Form
 {
@@ -11,18 +12,15 @@ class DummyClass extends Form
      *
      * @param array $input
      *
-     * @return mixed
+     * @return Response
      */
     public function handle(array $input)
     {
         // dump($input);
 
-        // return $this->response()->error('Your error message.');
+        // return $this->error('Your error message.');
 
-        return $this
-				->response()
-				->success('Processed successfully.')
-				->refresh();
+        return $this->success('Processed successfully.', '/');
     }
 
     /**

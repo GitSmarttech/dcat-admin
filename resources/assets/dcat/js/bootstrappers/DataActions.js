@@ -1,93 +1,92 @@
 import Dropdown from "../../../adminlte/js/Dropdown";
 
-let $document = $(document);
-
 let defaultActions = {
     // 刷新按钮
-    refresh (action, Dcat) {
-        $document.on('click', action, function () {
+    refresh: function ($action, Dcat) {
+        return function () {
             Dcat.reload($(this).data('url'));
-        });
+        };
     },
     // 删除按钮初始化
-    delete (action, Dcat) {
+    delete: function ($action, Dcat) {
         let lang = Dcat.lang;
 
-        $document.on('click', action, function() {
+        return function() {
             let url = $(this).data('url'),
                 redirect = $(this).data('redirect'),
                 msg = $(this).data('message');
 
             Dcat.confirm(lang.delete_confirm, msg, function () {
                 Dcat.NP.start();
-                $.delete({
+                $.ajax({
+                    method: 'post',
                     url: url,
-                    success: function (response) {
+                    data: {
+                        _method: 'delete',
+                    },
+                    success: function (data) {
                         Dcat.NP.done();
-
-                        response.data.detail = msg;
-
-                        if (redirect && ! response.data.then) {
-                            response.data.then = {action: 'redirect', value: redirect}
+                        if (data.status) {
+                            Dcat.reload(redirect);
+                            Dcat.swal.success(data.message, msg);
+                        } else {
+                            Dcat.swal.error(data.message, msg);
                         }
-
-                        Dcat.handleJsonResponse(response);
                     }
                 });
             });
-        });
+        };
     },
     // 批量删除按钮初始化
-    'batch-delete' (action, Dcat) {
-        $document.on('click', action, function() {
+    'batch-delete': function ($action, Dcat) {
+        return function() {
             let url = $(this).data('url'),
                 name = $(this).data('name'),
-                redirect = $(this).data('redirect'),
                 keys = Dcat.grid.selected(name),
                 lang = Dcat.lang;
 
             if (! keys.length) {
                 return;
             }
-            let msg = 'ID - ' + keys.join(', ');
-
-            Dcat.confirm(lang.delete_confirm, msg, function () {
+            Dcat.confirm(lang.delete_confirm, keys.join(', '), function () {
                 Dcat.NP.start();
-                $.delete({
+                $.ajax({
+                    method: 'post',
                     url: url + '/' + keys.join(','),
-                    success: function (response) {
+                    data: {
+                        _method: 'delete',
+                    },
+                    success: function (data) {
                         Dcat.NP.done();
-
-                        if (redirect && ! response.data.then) {
-                            response.data.then = {action: 'redirect', value: redirect}
+                        if (data.status) {
+                            Dcat.reload();
+                            Dcat.swal.success(data.message, keys.join(', '));
+                        } else {
+                            Dcat.swal.error(data.message, keys.join(', '));
                         }
-
-                        Dcat.handleJsonResponse(response);
                     }
                 });
             });
-        });
+        };
     },
 
     // 图片预览
-    'preview-img' (action, Dcat) {
-        $document.on('click', action, function () {
+    'preview-img': function ($action, Dcat) {
+        return function () {
             return Dcat.helpers.previewImage($(this).attr('src'));
-        });
+        };
     },
 
-    'popover' (action, Dcat) {
-        Dcat.onPjaxComplete(function () {
-            $('.popover').remove();
-        }, false);
+    'popover': function ($action) {
+        $('.popover').remove();
 
-        $document.on('click', action, function () {
-            $(this).popover()
-        });
+        return function () {
+            $action.popover()
+        };
     },
 
-    'box-actions' () {
-        $document.on('click', '.box [data-action="collapse"]', function (e) {
+    'box-actions': function () {
+        $('.box [data-action="collapse"]').click(function (e) {
             e.preventDefault();
 
             $(this).find('i').toggleClass('icon-minus icon-plus');
@@ -96,17 +95,17 @@ let defaultActions = {
         });
 
         // Close box
-        $document.on('click', '.box [data-action="remove"]', function () {
+        $('.box [data-action="remove"]').click(function () {
             $(this).closest(".box").removeClass().slideUp("fast");
         });
     },
 
-    dropdown () {
+    dropdown: function () {
         function hide() {
             $('.dropdown-menu').removeClass('show')
         }
-        $document.off('click', document, hide)
-        $document.on('click', hide);
+        $(document).off('click', document, hide)
+        $(document).on('click', hide);
 
         function toggle(event) {
             var $this = $(this);
@@ -123,27 +122,32 @@ let defaultActions = {
         function fix(event) {
             event.preventDefault()
             event.stopPropagation()
-
-            let $this = $(this);
-
+            // console.log(666);
             setTimeout(function() {
-                $this.Dropdown('fixPosition')
+                $(this).Dropdown('fixPosition')
             }, 1)
         }
 
-        let selector = '[data-toggle="dropdown"]';
-
-        $document.off('click',selector).on('click', selector, toggle).on('click', selector, fix);
-    },
+        $('[data-toggle="dropdown"]').off('click').on("click", toggle).on("click", fix);
+    }
 };
 
 export default class DataActions {
     constructor(Dcat) {
         let actions = $.extend(defaultActions, Dcat.actions()),
-            name;
+            $action,
+            name,
+            func;
 
         for (name in actions) {
-            actions[name](`[data-action="${name}"]`, Dcat);
+            $action = $(`[data-action="${name}"]`);
+
+            func = actions[name]($action, Dcat);
+
+            if (typeof func === 'function') {
+                // 必须先取消再绑定，否则可能造成重复绑定的效果
+                $action.off('click').click(func);
+            }
         }
     }
 }

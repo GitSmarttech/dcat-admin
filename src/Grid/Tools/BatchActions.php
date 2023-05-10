@@ -4,17 +4,10 @@ namespace Dcat\Admin\Grid\Tools;
 
 use Dcat\Admin\Admin;
 use Dcat\Admin\Grid\BatchAction;
-use Dcat\Admin\Traits\HasVariables;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Traits\Macroable;
 
 class BatchActions extends AbstractTool
 {
-    use Macroable;
-    use HasVariables;
-
-    protected $view = 'admin::grid.batch-actions';
-
     /**
      * @var Collection
      */
@@ -47,14 +40,7 @@ class BatchActions extends AbstractTool
      */
     protected function appendDefaultAction()
     {
-        $this->add($this->makeBatchDelete());
-    }
-
-    protected function makeBatchDelete()
-    {
-        $class = config('admin.grid.actions.batch_delete') ?: BatchDelete::class;
-
-        return new $class(trans('admin.delete'));
+        $this->add(new BatchDelete(trans('admin.delete')));
     }
 
     /**
@@ -70,11 +56,11 @@ class BatchActions extends AbstractTool
     }
 
     /**
-     * Disable delete And Hide SelectAll Checkbox.
+     * Disable delete And Hode SelectAll Checkbox.
      *
      * @return $this
      */
-    public function disableDeleteAndHideSelectAll()
+    public function disableDeleteAndHodeSelectAll()
     {
         $this->enableDelete = false;
 
@@ -111,14 +97,32 @@ class BatchActions extends AbstractTool
         }
     }
 
-    protected function defaultVariables()
+    /**
+     * Scripts of BatchActions button groups.
+     */
+    protected function setupScript()
     {
-        return [
-            'actions'                 => $this->actions,
-            'selectAllName'           => $this->parent->getSelectAllName(),
-            'isHoldSelectAllCheckbox' => $this->isHoldSelectAllCheckbox,
-            'parent'                  => $this->parent,
-        ];
+        $name = $this->parent->getName();
+        $allName = $this->parent->getSelectAllName();
+        $rowName = $this->parent->getRowName();
+
+        $selected = trans('admin.grid_items_selected');
+
+        $script = <<<JS
+$('.{$rowName}-checkbox').on('change', function () {
+    var btn = $('.{$allName}-btn'), selected = Dcat.grid.selectedRows('$name').length;
+    if (selected) {
+        btn.show()
+    } else {
+        btn.hide()
+    }
+    setTimeout(function () {
+         btn.find('.selected').html("{$selected}".replace('{n}', selected));
+    }, 50)
+});
+JS;
+
+        Admin::script($script);
     }
 
     /**
@@ -136,8 +140,15 @@ class BatchActions extends AbstractTool
             return '';
         }
 
+        $this->setupScript();
         $this->prepareActions();
 
-        return Admin::view($this->view, $this->variables());
+        $data = [
+            'actions'                 => $this->actions,
+            'selectAllName'           => $this->parent->getSelectAllName(),
+            'isHoldSelectAllCheckbox' => $this->isHoldSelectAllCheckbox,
+        ];
+
+        return view('admin::grid.batch-actions', $data)->render();
     }
 }

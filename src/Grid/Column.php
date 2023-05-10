@@ -7,6 +7,7 @@ use Dcat\Admin\Grid;
 use Dcat\Admin\Grid\Displayers\AbstractDisplayer;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasBuilderEvents;
+use Dcat\Admin\Traits\HasDefinitions;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -54,12 +55,13 @@ use Illuminate\Support\Traits\Macroable;
  */
 class Column
 {
-    use HasBuilderEvents;
-    use Grid\Column\HasHeader;
-    use Grid\Column\HasDisplayers;
-    use Macroable {
-        __call as __macroCall;
-    }
+    use HasBuilderEvents,
+        HasDefinitions,
+        Grid\Column\HasHeader,
+        Grid\Column\HasDisplayers,
+        Macroable {
+            __call as __macroCall;
+        }
 
     const SELECT_COLUMN_NAME = '__row_selector__';
     const ACTION_COLUMN_NAME = '__actions__';
@@ -195,7 +197,20 @@ class Column
 
     protected function formatName($name)
     {
-        return $name;
+        if (! Str::contains($name, '.')) {
+            return $name;
+        }
+
+        $names = explode('.', $name);
+        $count = count($names);
+
+        foreach ($names as $i => &$name) {
+            if ($i + 1 < $count) {
+                $name = Str::snake($name);
+            }
+        }
+
+        return implode('.', $names);
     }
 
     /**
@@ -242,13 +257,7 @@ class Column
      */
     public static function setOriginalGridModels(Collection $collection)
     {
-        static::$originalGridModels = $collection->map(function ($row) {
-            if (is_object($row)) {
-                return clone $row;
-            }
-
-            return $row;
-        });
+        static::$originalGridModels = $collection;
     }
 
     /**
@@ -267,32 +276,25 @@ class Column
 
     /**
      * @example
-     *     $grid->column('...')
-     *         ->if(function ($column) {
-     *             return $column->getValue() ? true : false;
+     *     $grid->config
+     *         ->if(function () {
+     *             return $this->config ? true : false;
      *         })
      *         ->display($view)
      *         ->expand(...)
      *         ->else()
-     *         ->display('')
+     *         ->emptyString()
      *
-     *    $grid->column('...')
-     *         ->if()
+     *    $grid->config
+     *         ->if(function () {
+     *             return $this->config ? true : false;
+     *         })
      *         ->then(function (Column $column) {
      *             $column ->display($view)->expand(...);
      *         })
      *         ->else(function (Column $column) {
      *             $column->emptyString();
      *         })
-     *
-     *     $grid->column('...')
-     *         ->if()
-     *         ->display($view)
-     *         ->expand(...)
-     *         ->else()
-     *         ->display('')
-     *         ->end()
-     *         ->modal()
      *
      * @param \Closure $condition
      *
@@ -338,9 +340,34 @@ class Column
      */
     public function hide()
     {
-        $this->grid->hideColumns($this->getName());
+        return $this->responsive(0);
+    }
 
-        return $this;
+    /**
+     * data-priority=”1″ 保持可见，但可以在下拉列表筛选隐藏。
+     * data-priority=”2″ 480px 分辨率以下可见
+     * data-priority=”3″ 640px 以下可见
+     * data-priority=”4″ 800px 以下可见
+     * data-priority=”5″ 960px 以下可见
+     * data-priority=”6″ 1120px 以下可见
+     *
+     * @param int $priority
+     *
+     * @return $this
+     */
+    public function responsive(?int $priority = 1)
+    {
+        $this->grid->responsive();
+
+        return $this->setHeaderAttributes(['data-priority' => $priority]);
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getDataPriority()
+    {
+        return isset($this->titleHtmlAttributes['data-priority']) ? $this->titleHtmlAttributes['data-priority'] : null;
     }
 
     /**
@@ -410,7 +437,9 @@ class Column
      */
     protected function formatLabel($label)
     {
-        return $label ?: str_replace('_', ' ', admin_trans_field($this->name));
+        $label = $label ?: admin_trans_field($this->name);
+
+        return str_replace(['.', '_'], ' ', $label);
     }
 
     /**
@@ -528,64 +557,38 @@ class Column
     /**
      * Fill all data to every column.
      *
-     * @param \Illuminate\Support\Collection $data
+     * @param array $data
      */
-    public function fill($data)
+    public function fill(array &$data)
     {
+        if (static::hasDefinition($this->name)) {
+            $this->useDefinedColumn();
+        }
+
         $i = 0;
-
-        $data->transform(function ($row, $key) use (&$i) {
-            $this->setOriginalModel(static::$originalGridModels[$key]);
-
-            $this->originalModel['_index'] = $row['_index'] = $i;
-
-            $row = $this->convertModelToArray($row);
-
+        foreach ($data as $key => &$row) {
             $i++;
             if (! isset($row['#'])) {
                 $row['#'] = $i;
             }
 
-            $this->original = Arr::get($this->originalModel, $this->name);
+            $this->original = $value = Arr::get($row, $this->name);
 
-            $this->value = $value = $this->htmlEntityEncode($original = Arr::get($row, $this->name));
+            $this->value = $value = $this->htmlEntityEncode($value);
 
-            if ($original === null) {
-                $original = (string) $original;
-            }
+            $this->setOriginalModel(static::$originalGridModels[$key]);
 
             $this->processConditions();
 
+            Arr::set($row, $this->name, $value);
+
             if ($this->hasDisplayCallbacks()) {
                 $value = $this->callDisplayCallbacks($this->original);
+                Arr::set($row, $this->name, $value);
             }
-
-            if ($original !== $value) {
-                Helper::arraySet($row, $this->name, $value);
-            }
-
-            $this->value = $value ?? null;
-
-            return $row;
-        });
-    }
-
-    /**
-     * 把模型转化为数组.
-     *
-     * @param array|Model $row
-     *
-     * @return mixed
-     */
-    protected function convertModelToArray(&$row)
-    {
-        if (is_array($row)) {
-            return $row;
         }
 
-        $array = $row->toArray();
-
-        return Helper::camelArray($array);
+        $this->value = $value ?? null;
     }
 
     /**
@@ -600,6 +603,28 @@ class Column
         foreach ($this->conditions as $condition) {
             $condition->process();
         }
+    }
+
+    /**
+     * Use a defined column.
+     *
+     * @throws \Exception
+     */
+    protected function useDefinedColumn()
+    {
+        $class = static::$definitions[$this->name];
+
+        if ($class instanceof Closure) {
+            $this->display($class);
+
+            return;
+        }
+
+        if (! class_exists($class) || ! is_subclass_of($class, AbstractDisplayer::class)) {
+            throw new \Exception("Invalid column definition [$class]");
+        }
+
+        $this->displayUsing($class);
     }
 
     /**
@@ -746,21 +771,6 @@ class Column
         }
 
         return implode(' ', $attrArr);
-    }
-
-    /**
-     * @param  mixed  $value
-     * @param  callable  $callback
-     *
-     * @return $this|mixed
-     */
-    public function when($value, $callback)
-    {
-        if ($value) {
-            return $callback($this, $value) ?: $this;
-        }
-
-        return $this;
     }
 
     /**

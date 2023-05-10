@@ -11,6 +11,7 @@ use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
@@ -33,7 +34,26 @@ class Helper
         'video'      => 'mkv|rmvb|flv|mp4|avi|wmv|rm|asf|mpeg',
     ];
 
-    protected static $controllerNames = [];
+    /**
+     * 更新扩展配置.
+     *
+     * @param array $config
+     *
+     * @return bool
+     */
+    public static function updateExtensionConfig(array $config)
+    {
+        $files = app('files');
+        $result = (bool) $files->put(config_path('admin-extensions.php'), self::exportArrayPhp($config));
+
+        if ($result && is_file(base_path('bootstrap/cache/config.php'))) {
+            Artisan::call('config:cache');
+        }
+
+        config(['admin-extensions' => $config]);
+
+        return $result;
+    }
 
     /**
      * 把给定的值转化为数组.
@@ -45,7 +65,7 @@ class Helper
      */
     public static function array($value, bool $filter = true): array
     {
-        if ($value === null || $value === '' || $value === []) {
+        if (! $value) {
             return [];
         }
 
@@ -97,6 +117,10 @@ class Helper
             $value = $value(...(array) $params);
         }
 
+        if ($value instanceof Grid) {
+            return (string) $value->render();
+        }
+
         if ($value instanceof Renderable) {
             return (string) $value->render();
         }
@@ -106,30 +130,6 @@ class Helper
         }
 
         return (string) $value;
-    }
-
-    /**
-     * 获取当前控制器名称.
-     *
-     * @return mixed|string
-     */
-    public static function getControllerName()
-    {
-        $router = app('router');
-
-        if (! $router->current()) {
-            return 'undefined';
-        }
-
-        $actionName = $router->current()->getActionName();
-
-        if (! isset(static::$controllerNames[$actionName])) {
-            $controller = class_basename(explode('@', $actionName)[0]);
-
-            static::$controllerNames[$actionName] = str_replace('Controller', '', $controller);
-        }
-
-        return static::$controllerNames[$actionName];
     }
 
     /**
@@ -279,7 +279,7 @@ class Helper
         }
 
         // 判断路由名称
-        if ($request->routeIs($path) || $request->routeIs(admin_route_name($path))) {
+        if ($request->routeIs($path)) {
             return true;
         }
 
@@ -318,13 +318,13 @@ class Helper
         $parentId = is_numeric($parentId) ? (int) $parentId : $parentId;
 
         foreach ($nodes as $node) {
-            $pk = $node[$parentKeyName];
+            $pk = Arr::get($node, $parentKeyName);
             $pk = is_numeric($pk) ? (int) $pk : $pk;
 
             if ($pk === $parentId) {
                 $children = static::buildNestedArray(
                     $nodes,
-                    $node[$primaryKeyName],
+                    Arr::get($node, $primaryKeyName),
                     $primaryKeyName,
                     $parentKeyName,
                     $childrenKeyName
@@ -348,7 +348,7 @@ class Helper
      */
     public static function slug(string $name, string $symbol = '-')
     {
-        $text = preg_replace_callback('/([A-Z])/', function ($text) use ($symbol) {
+        $text = preg_replace_callback('/([A-Z])/', function (&$text) use ($symbol) {
             return $symbol.strtolower($text[1]);
         }, $name);
 
@@ -412,14 +412,13 @@ class Helper
      *
      * @param array $array
      * @param mixed $value
-     * @param bool $strict
      */
-    public static function deleteByValue(&$array, $value, bool $strict = false)
+    public static function deleteByValue(&$array, $value)
     {
         $value = (array) $value;
 
         foreach ($array as $index => $item) {
-            if (in_array($item, $value, $strict)) {
+            if (in_array($item, $value)) {
                 unset($array[$index]);
             }
         }
@@ -646,27 +645,6 @@ class Helper
     }
 
     /**
-     * 判断给定的数组是是否包含给定元素.
-     *
-     * @param mixed $value
-     * @param array $array
-     *
-     * @return bool
-     */
-    public static function inArray($value, array $array)
-    {
-        $array = array_map(function ($v) {
-            if (is_scalar($v) || $v === null) {
-                $v = (string) $v;
-            }
-
-            return $v;
-        }, $array);
-
-        return in_array((string) $value, $array, true);
-    }
-
-    /**
      * Limit the number of characters in a string.
      *
      * @param string $value
@@ -698,11 +676,8 @@ class Helper
             $class = get_class($class);
         }
 
-        try {
-            if (class_exists($class)) {
-                return (new \ReflectionClass($class))->getFileName();
-            }
-        } catch (\Throwable $e) {
+        if (class_exists($class)) {
+            return (new \ReflectionClass($class))->getFileName();
         }
 
         $class = trim($class, '\\');
@@ -770,7 +745,7 @@ class Helper
         foreach ($relations as $first => $v) {
             if (isset($input[$first])) {
                 foreach ($input[$first] as $key => $value) {
-                    if (is_array($value)) {
+                    if (is_array($value) && ! Arr::isAssoc($value)) {
                         $input["$first.$key"] = $value;
                     }
                 }
@@ -798,12 +773,7 @@ class Helper
             return;
         }
 
-        $method = $query === 'orWhere' ? 'orWhere' : 'where';
-        $subQuery = $query === 'orWhere' ? 'where' : $query;
-
-        $model->$method(function ($q) use ($column, $subQuery, $params) {
-            static::withRelationQuery($q, $column, $subQuery, $params);
-        });
+        static::withRelationQuery($model, $column, $query, $params);
     }
 
     /**
@@ -839,9 +809,6 @@ class Helper
      */
     public static function htmlEntityEncode($item)
     {
-        if (is_object($item)) {
-            return $item;
-        }
         if (is_array($item)) {
             array_walk_recursive($item, function (&$value) {
                 $value = htmlentities($value);
@@ -851,135 +818,5 @@ class Helper
         }
 
         return $item;
-    }
-
-    /**
-     * 格式化表单元素 name 属性.
-     *
-     * @param string|array $name
-     *
-     * @return mixed|string
-     */
-    public static function formatElementName($name)
-    {
-        if (! $name) {
-            return $name;
-        }
-
-        if (is_array($name)) {
-            foreach ($name as &$v) {
-                $v = static::formatElementName($v);
-            }
-
-            return $name;
-        }
-
-        $name = explode('.', $name);
-
-        if (count($name) == 1) {
-            return $name[0];
-        }
-
-        $html = array_shift($name);
-        foreach ($name as $piece) {
-            $html .= "[$piece]";
-        }
-
-        return $html;
-    }
-
-    /**
-     * Set an array item to a given value using "dot" notation.
-     *
-     * If no key is given to the method, the entire array will be replaced.
-     *
-     * @param  array|\ArrayAccess  $array
-     * @param  string  $key
-     * @param  mixed   $value
-     * @return array
-     */
-    public static function arraySet(&$array, $key, $value)
-    {
-        if (is_null($key)) {
-            return $array = $value;
-        }
-
-        $keys = explode('.', $key);
-        $default = null;
-
-        while (count($keys) > 1) {
-            $key = array_shift($keys);
-
-            if (! isset($array[$key]) || (! is_array($array[$key]) && ! $array[$key] instanceof \ArrayAccess)) {
-                $array[$key] = [];
-            }
-
-            if (is_array($array)) {
-                $array = &$array[$key];
-            } else {
-                if (is_object($array[$key])) {
-                    $array[$key] = static::arraySet($array[$key], implode('.', $keys), $value);
-                } else {
-                    $mid = $array[$key];
-
-                    $array[$key] = static::arraySet($mid, implode('.', $keys), $value);
-                }
-            }
-        }
-
-        $array[array_shift($keys)] = $value;
-
-        return $array;
-    }
-
-    /**
-     * 把下划线风格字段名转化为驼峰风格.
-     *
-     * @param array $array
-     *
-     * @return array
-     */
-    public static function camelArray(array &$array)
-    {
-        foreach ($array as $k => $v) {
-            if (is_array($v)) {
-                Helper::camelArray($v);
-            }
-
-            $array[Str::camel($k)] = $v;
-        }
-
-        return $array;
-    }
-
-    /**
-     * 获取文件名称.
-     *
-     * @param string $name
-     *
-     * @return array|mixed
-     */
-    public static function basename($name)
-    {
-        if (! $name) {
-            return $name;
-        }
-
-        return last(explode('/', $name));
-    }
-
-    /**
-     * @param string|int $key
-     * @param array|object $arrayOrObject
-     *
-     * @return bool
-     */
-    public static function keyExists($key, $arrayOrObject)
-    {
-        if (is_object($arrayOrObject)) {
-            $arrayOrObject = static::array($arrayOrObject, false);
-        }
-
-        return array_key_exists($key, $arrayOrObject);
     }
 }

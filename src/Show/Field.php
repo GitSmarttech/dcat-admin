@@ -6,7 +6,7 @@ use Dcat\Admin\Admin;
 use Dcat\Admin\Show;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasBuilderEvents;
-use Dcat\Admin\Traits\HasVariables;
+use Dcat\Admin\Traits\HasDefinitions;
 use Dcat\Admin\Widgets\Dump;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Renderable;
@@ -19,9 +19,9 @@ use Illuminate\Support\Traits\Macroable;
 
 class Field implements Renderable
 {
-    use HasBuilderEvents;
-    use HasVariables;
-    use Macroable {
+    use HasBuilderEvents,
+        HasDefinitions,
+        Macroable {
             __call as macroCall;
         }
 
@@ -92,7 +92,7 @@ class Field implements Renderable
     /**
      * @var int
      */
-    protected $width = ['field' => 8, 'label' => 2];
+    protected $width = 8;
 
     /**
      * Field constructor.
@@ -136,14 +136,15 @@ class Field implements Renderable
     /**
      * @param int $width
      *
-     * @return $this|array
+     * @return $this|int
      */
-    public function width(int $field, int $label = 2)
+    public function width(int $width = null)
     {
-        $this->width = [
-            'label' => $label,
-            'field' => $field,
-        ];
+        if ($width === null) {
+            return $this->width;
+        }
+
+        $this->width = $width;
 
         return $this;
     }
@@ -157,13 +158,9 @@ class Field implements Renderable
      */
     protected function formatLabel($label)
     {
-        if ($label) {
-            return $label;
-        }
+        $label = $label ?: admin_trans_field($this->name);
 
-        $label = admin_trans_field($this->name);
-
-        return str_replace('_', ' ', $label);
+        return str_replace(['.', '_'], ' ', $label);
     }
 
     /**
@@ -225,9 +222,7 @@ class Field implements Renderable
                 return '';
             }
 
-            $path = Helper::array($path);
-
-            return collect($path)->transform(function ($path) use ($server, $width, $height) {
+            return collect((array) $path)->transform(function ($path) use ($server, $width, $height) {
                 if (url()->isValidUrl($path)) {
                     $src = $path;
                 } elseif ($server) {
@@ -259,55 +254,47 @@ class Field implements Renderable
     {
         $field = $this;
 
-        return $this->unescape()->as(function ($path) use ($server, $field) {
-            if (empty($path)) {
+        return $this->unescape()->as(function ($path) use ($server , $field) {
+            $name = basename($path);
+
+            $field->wrap(false);
+
+            $size = $url = '';
+
+            if (url()->isValidUrl($path)) {
+                $url = $path;
+            } elseif ($server) {
+                $url = $server.$path;
+            } else {
+                $storage = Storage::disk(config('admin.upload.disk'));
+                if ($storage->exists($path)) {
+                    $url = $storage->url($path);
+                    $size = ($storage->size($path) / 1000).'KB';
+                }
+            }
+
+            if (! $url) {
                 return '';
             }
 
-            $path = Helper::array($path);
+            $icon = Helper::getFileIcon($name);
 
-            $list = collect($path)->transform(function ($path) use ($server, $field) {
-                $name = Helper::basename($path);
-
-                $field->wrap(false);
-
-                $size = $url = '';
-
-                if (url()->isValidUrl($path)) {
-                    $url = $path;
-                } elseif ($server) {
-                    $url = $server.$path;
-                } else {
-                    $storage = Storage::disk(config('admin.upload.disk'));
-                    if ($storage->exists($path)) {
-                        $url = $storage->url($path);
-                        $size = ($storage->size($path) / 1000).'KB';
-                    }
-                }
-
-                if (! $url) {
-                    return '';
-                }
-
-                $icon = Helper::getFileIcon($name);
-
-                return <<<HTML
-<li style="margin-bottom: 0;">
-    <span class="mailbox-attachment-icon"><i class="{$icon}"></i></span>
-    <div class="mailbox-attachment-info">
+            return <<<HTML
+<ul class="mailbox-attachments clearfix">
+    <li style="margin-bottom: 0;">
+      <span class="mailbox-attachment-icon"><i class="{$icon}"></i></span>
+      <div class="mailbox-attachment-info">
         <div class="mailbox-attachment-name">
             <i class="fa fa-paperclip"></i> {$name}
-        </div>
-        <span class="mailbox-attachment-size">
-            {$size}&nbsp;
-            <a href="{$url}" class="btn btn-white  btn-xs pull-right" target="_blank"><i class="fa fa-cloud-download"></i></a>
-        </span>
-    </div>
-</li>
+            </div>
+            <span class="mailbox-attachment-size">
+              {$size}&nbsp;
+              <a href="{$url}" class="btn btn-white  btn-xs pull-right" target="_blank"><i class="fa fa-cloud-download"></i></a>
+            </span>
+      </div>
+    </li>
+  </ul>
 HTML;
-            })->implode('&nbsp;');
-
-            return "<ul class=\"mailbox-attachments clearfix\">{$list}</ul>";
         });
     }
 
@@ -344,7 +331,7 @@ HTML;
 
             return collect($value)->map(function ($name) use ($class, $background) {
                 return "<span class='label bg-{$class}' $background>$name</span>";
-            })->implode(' ');
+            })->implode('&nbsp;');
         });
     }
 
@@ -385,7 +372,7 @@ HTML;
 
             return collect($value)->map(function ($name) use ($class, $background) {
                 return "<span class='badge bg-{$class}' $background>$name</span>";
-            })->implode(' ');
+            })->implode('&nbsp;');
         });
     }
 
@@ -501,18 +488,17 @@ HTML;
      * Render this column with the given view.
      *
      * @param string $view
-     * @param array  $data
      *
      * @return $this
      */
-    public function view($view, array $data = [])
+    public function view($view)
     {
         $name = $this->name;
 
-        return $this->unescape()->as(function ($value) use ($view, $name, $data) {
+        return $this->unescape()->as(function ($value) use ($view, $name) {
             $model = $this;
 
-            return view($view, array_merge(compact('model', 'value', 'name'), $data))->render();
+            return view($view, compact('model', 'value', 'name'))->render();
         });
     }
 
@@ -541,11 +527,11 @@ HTML;
     }
 
     /**
-     * @param Fluent|\Illuminate\Database\Eloquent\Model $model
+     * @param Fluent $model
      *
      * @return void
      */
-    public function fill($model)
+    public function fill(Fluent $model)
     {
         $this->value(Arr::get($model->toArray(), $this->name));
     }
@@ -574,56 +560,6 @@ HTML;
     public function wrap(bool $wrap = true)
     {
         $this->border = $wrap;
-
-        return $this;
-    }
-
-    /**
-     * @param string $color
-     *
-     * @return $this
-     */
-    public function bold($color = null)
-    {
-        $color = $color ?: Admin::color()->dark80();
-
-        return $this->unescape()->as(function ($value) use ($color) {
-            if (! $value) {
-                return $value;
-            }
-
-            return "<b style='color: {$color}'>$value</b>";
-        });
-    }
-
-    /**
-     * Display field as boolean , `✓` for true, and `✗` for false.
-     *
-     * @param array $map
-     * @param bool  $default
-     *
-     * @return $this
-     */
-    public function bool(array $map = [], $default = false)
-    {
-        return $this->unescape()->as(function ($value) use ($map, $default) {
-            $bool = empty($map) ? $value : Arr::get($map, $value, $default);
-
-            return $bool ? '<i class="feather icon-check font-md-2 font-w-600 text-primary"></i>' : '<i class="feather icon-x font-md-1 font-w-600 text-70"></i>';
-        });
-    }
-
-    /**
-     * @param  mixed  $value
-     * @param  callable  $callback
-     *
-     * @return $this|mixed
-     */
-    public function when($value, $callback)
-    {
-        if ($value) {
-            return $callback($this, $value) ?: $this;
-        }
 
         return $this;
     }
@@ -722,7 +658,7 @@ HTML;
      *
      * @return array
      */
-    protected function defaultVariables()
+    protected function variables()
     {
         return [
             'content' => $this->value,
@@ -740,6 +676,10 @@ HTML;
      */
     public function render()
     {
+        if (static::hasDefinition($this->name)) {
+            $this->useDefinedColumn();
+        }
+
         if ($this->showAs->isNotEmpty()) {
             $this->showAs->each(function ($callable) {
                 [$callable, $params] = $callable;
@@ -759,6 +699,22 @@ HTML;
         }
 
         return view($this->view, $this->variables());
+    }
+
+    /**
+     * Use a defined column.
+     *
+     * @throws \Exception
+     */
+    protected function useDefinedColumn()
+    {
+        $class = static::$definitions[$this->name];
+
+        if (! $class instanceof \Closure) {
+            throw new \Exception("Invalid column definition [$class]");
+        }
+
+        $this->as($class);
     }
 
     /**

@@ -2,16 +2,10 @@
 
 namespace Dcat\Admin\Grid\Column;
 
-use Dcat\Admin\Grid;
 use Illuminate\Contracts\Support\Renderable;
 
 class Sorter implements Renderable
 {
-    /**
-     * @var Grid
-     */
-    protected $grid;
-
     /**
      * Sort arguments.
      *
@@ -29,18 +23,23 @@ class Sorter implements Renderable
     /**
      * @var string
      */
+    protected $sortName;
+
+    /**
+     * @var string
+     */
     protected $columnName;
 
     /**
      * Sorter constructor.
      *
-     * @param Grid $grid
+     * @param string $sortName
      * @param string $columnName
      * @param string $cast
      */
-    public function __construct(Grid $grid, $columnName, $cast)
+    public function __construct($sortName, $columnName, $cast)
     {
-        $this->grid = $grid;
+        $this->sortName = $sortName;
         $this->columnName = $columnName;
         $this->cast = $cast;
     }
@@ -52,18 +51,13 @@ class Sorter implements Renderable
      */
     protected function isSorted()
     {
-        $this->sort = app('request')->get($this->getSortName());
+        $this->sort = app('request')->get($this->sortName);
 
         if (empty($this->sort)) {
             return false;
         }
 
         return isset($this->sort['column']) && $this->sort['column'] == $this->columnName;
-    }
-
-    protected function getSortName()
-    {
-        return $this->grid->model()->getSortName();
     }
 
     /**
@@ -92,11 +86,11 @@ class Sorter implements Renderable
 
         if (! $this->isSorted() || $this->sort['type'] != 'asc') {
             $url = request()->fullUrlWithQuery([
-                $this->getSortName() => $sort,
+                $this->sortName => $sort,
             ]);
         } else {
             $url = request()->fullUrlWithQuery([
-                $this->getSortName() => [],
+                $this->sortName => [],
             ]);
         }
 

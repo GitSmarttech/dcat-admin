@@ -7,11 +7,11 @@ use Dcat\Admin\Contracts\Repository;
 use Dcat\Admin\Grid\Column;
 use Dcat\Admin\Grid\Concerns;
 use Dcat\Admin\Grid\Model;
+use Dcat\Admin\Grid\Responsive;
 use Dcat\Admin\Grid\Row;
 use Dcat\Admin\Grid\Tools;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasBuilderEvents;
-use Dcat\Admin\Traits\HasVariables;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -19,28 +19,26 @@ use Illuminate\Support\Traits\Macroable;
 
 class Grid
 {
-    use HasBuilderEvents;
-    use HasVariables;
-    use Concerns\HasEvents;
-    use Concerns\HasNames;
-    use Concerns\HasFilter;
-    use Concerns\HasTools;
-    use Concerns\HasActions;
-    use Concerns\HasPaginator;
-    use Concerns\HasExporter;
-    use Concerns\HasComplexHeaders;
-    use Concerns\HasSelector;
-    use Concerns\HasQuickCreate;
-    use Concerns\HasQuickSearch;
-    use Concerns\CanFixColumns;
-    use Concerns\CanHidesColumns;
-    use Macroable {
-        __call as macroCall;
-    }
+    use HasBuilderEvents,
+        Concerns\HasNames,
+        Concerns\HasFilter,
+        Concerns\HasTools,
+        Concerns\HasActions,
+        Concerns\HasPaginator,
+        Concerns\HasExporter,
+        Concerns\HasComplexHeaders,
+        Concerns\HasSelector,
+        Concerns\HasQuickCreate,
+        Concerns\HasQuickSearch,
+        Concerns\CanFixColumns,
+        Macroable {
+            __call as macroCall;
+        }
 
     const CREATE_MODE_DEFAULT = 'default';
     const CREATE_MODE_DIALOG = 'dialog';
-    const ASYNC_NAME = '_async_';
+
+    const IFRAME_QUERY_NAME = '_grid_iframe_';
 
     /**
      * The grid data model instance.
@@ -71,9 +69,11 @@ class Grid
     protected $rows;
 
     /**
-     * @var array
+     * Rows callable fucntion.
+     *
+     * @var \Closure[]
      */
-    protected $rowsCallbacks = [];
+    protected $rowsCallback = [];
 
     /**
      * All column names of the grid.
@@ -97,6 +97,13 @@ class Grid
     protected $built = false;
 
     /**
+     * All variables in grid view.
+     *
+     * @var array
+     */
+    protected $variables = [];
+
+    /**
      * Resource path of the grid.
      *
      * @var
@@ -106,31 +113,36 @@ class Grid
     /**
      * Default primary key name.
      *
-     * @var string|array
+     * @var string
      */
-    protected $keyName;
+    protected $keyName = 'id';
 
     /**
      * View for grid to render.
      *
      * @var string
      */
-    protected $view = 'admin::grid.table';
+    protected $view = 'admin::grid.data-table';
 
     /**
-     * @var Closure[]
+     * @var Closure
      */
-    protected $header = [];
+    protected $header;
 
     /**
-     * @var Closure[]
+     * @var Closure
      */
-    protected $footer = [];
+    protected $footer;
 
     /**
      * @var Closure
      */
     protected $wrapper;
+
+    /**
+     * @var Responsive
+     */
+    protected $responsive;
 
     /**
      * @var bool
@@ -153,41 +165,22 @@ class Grid
      * @var array
      */
     protected $options = [
-        'pagination'          => true,
-        'filter'              => true,
-        'actions'             => true,
-        'quick_edit_button'   => false,
-        'edit_button'         => true,
-        'view_button'         => true,
-        'delete_button'       => true,
-        'row_selector'        => true,
-        'create_button'       => true,
-        'bordered'            => false,
-        'table_collapse'      => true,
-        'toolbar'             => true,
-        'create_mode'         => self::CREATE_MODE_DEFAULT,
-        'dialog_form_area'    => ['700px', '670px'],
-        'table_class'         => ['table', 'custom-data-table', 'data-table'],
-        'scrollbar_x'         => false,
-        'actions_class'       => null,
-        'batch_actions_class' => null,
-        'paginator_class'     => null,
+        'show_pagination'        => true,
+        'show_filter'            => true,
+        'show_actions'           => true,
+        'show_quick_edit_button' => false,
+        'show_edit_button'       => true,
+        'show_view_button'       => true,
+        'show_delete_button'     => true,
+        'show_row_selector'      => true,
+        'show_create_button'     => true,
+        'show_bordered'          => false,
+        'table_collapse'         => true,
+        'show_toolbar'           => true,
+        'create_mode'            => self::CREATE_MODE_DEFAULT,
+        'dialog_form_area'       => ['700px', '670px'],
+        'table_class'            => ['table', 'dt-checkboxes-select'],
     ];
-
-    /**
-     * @var \Illuminate\Http\Request
-     */
-    protected $request;
-
-    /**
-     * @var bool
-     */
-    protected $show = true;
-
-    /**
-     * @var bool
-     */
-    protected $async = false;
 
     /**
      * Create a new grid instance.
@@ -197,15 +190,13 @@ class Grid
      * @param Repository|\Illuminate\Database\Eloquent\Model|Builder|null $repository
      * @param null|\Closure                                       $builder
      */
-    public function __construct($repository = null, ?\Closure $builder = null, $request = null)
+    public function __construct($repository = null, ?\Closure $builder = null)
     {
         $this->model = new Model(request(), $repository);
         $this->columns = new Collection();
         $this->allColumns = new Collection();
         $this->rows = new Collection();
         $this->builder = $builder;
-        $this->request = $request ?: request();
-        $this->resourcePath = url($this->request->getPathInfo());
 
         if ($repository = $this->model->repository()) {
             $this->setKeyName($repository->getKeyName());
@@ -213,8 +204,8 @@ class Grid
 
         $this->model->setGrid($this);
 
-        $this->setUpTools();
-        $this->setUpFilter();
+        $this->setupTools();
+        $this->setupFilter();
 
         $this->callResolving();
     }
@@ -232,11 +223,11 @@ class Grid
     /**
      * Set primary key name.
      *
-     * @param string|array $name
+     * @param string $name
      *
      * @return $this
      */
-    public function setKeyName($name)
+    public function setKeyName(string $name)
     {
         $this->keyName = $name;
 
@@ -246,7 +237,7 @@ class Grid
     /**
      * Get or set primary key name.
      *
-     * @return string|array
+     * @return string|void
      */
     public function getKeyName()
     {
@@ -276,47 +267,6 @@ class Grid
     public function number(?string $label = null)
     {
         return $this->addColumn('#', $label ?: '#');
-    }
-
-    /**
-     * 启用异步渲染功能.
-     *
-     * @param bool $async
-     *
-     * @return $this
-     */
-    public function async(bool $async = true)
-    {
-        $this->async = $async;
-
-        if ($async) {
-            $this->view('admin::grid.async-table');
-        }
-
-        return $this;
-    }
-
-    public function getAsync()
-    {
-        return $this->async;
-    }
-
-    /**
-     * 判断是否允许查询数据.
-     *
-     * @return bool
-     */
-    public function buildable()
-    {
-        return ! $this->async || $this->isAsyncRequest();
-    }
-
-    /**
-     * @return bool
-     */
-    public function isAsyncRequest()
-    {
-        return $this->request->get(static::ASYNC_NAME);
     }
 
     /**
@@ -355,25 +305,6 @@ class Grid
     public function allColumns()
     {
         return $this->allColumns;
-    }
-
-    /**
-     * 删除列.
-     *
-     * @param string|Column $column
-     *
-     * @return $this
-     */
-    public function dropColumn($column)
-    {
-        if ($column instanceof Column) {
-            $column = $column->getName();
-        }
-
-        $this->columns->offsetUnset($column);
-        $this->allColumns->offsetUnset($column);
-
-        return $this;
     }
 
     /**
@@ -464,8 +395,11 @@ class Grid
 
     public function formatTableClass()
     {
-        if ($this->options['bordered']) {
-            $this->addTableClass(['table-bordered', 'complex-headers', 'data-table']);
+        if ($this->options['show_bordered']) {
+            $this->addTableClass(['table-bordered', 'complex-headers', 'dataTable']);
+        }
+        if ($this->getComplexHeaders()) {
+            $this->addTableClass('table-text-center');
         }
 
         return implode(' ', array_unique((array) $this->options['table_class']));
@@ -478,36 +412,30 @@ class Grid
      */
     public function build()
     {
-        if (! $this->buildable()) {
-            $this->callBuilder();
-            $this->handleExportRequest();
-
-            $this->prependRowSelectorColumn();
-            $this->appendActionsColumn();
-
-            $this->sortHeaders();
-
-            return;
-        }
-
         if ($this->built) {
             return;
         }
 
-        $collection = clone $this->processFilter();
+        $collection = $this->processFilter(false);
+
+        $data = $collection->toArray();
 
         $this->prependRowSelectorColumn();
         $this->appendActionsColumn();
 
         Column::setOriginalGridModels($collection);
 
-        $this->columns->map(function (Column $column) use (&$collection) {
-            $column->fill($collection);
+        $this->columns->map(function (Column $column) use (&$data) {
+            $column->fill($data);
 
             $this->columnNames[] = $column->getName();
         });
 
-        $this->buildRows($collection);
+        $this->buildRows($data);
+
+        if ($data && $this->responsive) {
+            $this->responsive->build();
+        }
 
         $this->sortHeaders();
     }
@@ -527,35 +455,37 @@ class Grid
     /**
      * Build the grid rows.
      *
-     * @param Collection $data
+     * @param array $data
      *
      * @return void
      */
-    protected function buildRows($data)
+    protected function buildRows(array $data)
     {
-        $this->rows = $data->map(function ($row) {
-            return new Row($this, $row);
+        $this->rows = collect($data)->map(function ($model) {
+            return new Row($this, $model);
         });
 
-        foreach ($this->rowsCallbacks as $callback) {
-            $callback($this->rows);
+        if ($this->rowsCallback) {
+            foreach ($this->rowsCallback as $value) {
+                $value($this->rows);
+            }
         }
     }
 
     /**
      * Set grid row callback function.
      *
-     * @return Collection|$this
+     * @param Closure $callable
+     *
+     * @return Collection|void
      */
-    public function rows(\Closure $callback = null)
+    public function rows(Closure $callable = null)
     {
-        if ($callback) {
-            $this->rowsCallbacks[] = $callback;
-
-            return $this;
+        if (is_null($callable)) {
+            return $this->rows;
         }
 
-        return $this->rows;
+        $this->rowsCallback[] = $callable;
     }
 
     /**
@@ -565,33 +495,17 @@ class Grid
      */
     public function getCreateUrl()
     {
-        return $this->urlWithConstraints($this->resource().'/create');
-    }
-
-    /**
-     * @param string $key
-     *
-     * @return string
-     */
-    public function getEditUrl($key)
-    {
-        return $this->urlWithConstraints("{$this->resource()}/{$key}/edit");
-    }
-
-    /**
-     * @param string $url
-     *
-     * @return string
-     */
-    public function urlWithConstraints(?string $url)
-    {
         $queryString = '';
 
         if ($constraints = $this->model()->getConstraints()) {
             $queryString = http_build_query($constraints);
         }
 
-        return $url.($queryString ? ('?'.$queryString) : '');
+        return sprintf(
+            '%s/create%s',
+            $this->resource(),
+            $queryString ? ('?'.$queryString) : ''
+        );
     }
 
     /**
@@ -611,7 +525,7 @@ class Grid
      */
     protected function prependRowSelectorColumn()
     {
-        if (! $this->options['row_selector']) {
+        if (! $this->options['show_row_selector']) {
             return;
         }
 
@@ -619,8 +533,9 @@ class Grid
         $keyName = $this->getKeyName();
 
         $this->prependColumn(
-            Grid\Column::SELECT_COLUMN_NAME
-        )->setLabel($rowSelector->renderHeader())->display(function () use ($rowSelector, $keyName) {
+            Grid\Column::SELECT_COLUMN_NAME,
+            $rowSelector->renderHeader()
+        )->display(function () use ($rowSelector, $keyName) {
             return $rowSelector->renderColumn($this, $this->{$keyName});
         });
     }
@@ -645,7 +560,7 @@ class Grid
      */
     public function renderCreateButton()
     {
-        if (! $this->options['create_button']) {
+        if (! $this->options['show_create_button']) {
             return '';
         }
 
@@ -659,7 +574,7 @@ class Grid
      */
     public function withBorder(bool $value = true)
     {
-        $this->options['bordered'] = $value;
+        $this->options['show_bordered'] = $value;
 
         return $this;
     }
@@ -681,11 +596,15 @@ class Grid
      *
      * @param Closure|string|Renderable $content
      *
-     * @return $this
+     * @return $this|Closure
      */
-    public function header($content)
+    public function header($content = null)
     {
-        $this->header[] = $content;
+        if (! $content) {
+            return $this->header;
+        }
+
+        $this->header = $content;
 
         return $this;
     }
@@ -701,25 +620,15 @@ class Grid
             return '';
         }
 
-        return <<<HTML
-<div class="card-header clearfix" style="border-bottom: 0;background: transparent;padding: 0">{$this->renderHeaderOrFooter($this->header)}</div>
-HTML;
-    }
-
-    protected function renderHeaderOrFooter($callbacks)
-    {
-        $target = [$this->processFilter()];
-        $content = [];
-
-        foreach ($callbacks as $callback) {
-            $content[] = Helper::render($callback, $target);
-        }
+        $content = Helper::render($this->header, [$this->processFilter(false)]);
 
         if (empty($content)) {
             return '';
         }
 
-        return implode('<div class="mb-1 clearfix"></div>', $content);
+        return <<<HTML
+<div class="card-header clearfix" style="border-bottom: 0;background: transparent;padding: 0">{$content}</div>
+HTML;
     }
 
     /**
@@ -727,11 +636,15 @@ HTML;
      *
      * @param Closure|string|Renderable $content
      *
-     * @return $this
+     * @return $this|Closure
      */
-    public function footer($content)
+    public function footer($content = null)
     {
-        $this->footer[] = $content;
+        if (! $content) {
+            return $this->footer;
+        }
+
+        $this->footer = $content;
 
         return $this;
     }
@@ -747,16 +660,22 @@ HTML;
             return '';
         }
 
+        $content = Helper::render($this->footer, [$this->processFilter(false)]);
+
+        if (empty($content)) {
+            return '';
+        }
+
         return <<<HTML
-<div class="box-footer clearfix">{$this->renderHeaderOrFooter($this->footer)}</div>
+<div class="box-footer clearfix">{$content}</div>
 HTML;
     }
 
     /**
      * Get or set option for grid.
      *
-     * @param string|array $key
-     * @param mixed        $value
+     * @param string $key
+     * @param mixed  $value
      *
      * @return $this|mixed
      */
@@ -766,18 +685,14 @@ HTML;
             return $this->options[$key] ?? null;
         }
 
-        if (is_array($key)) {
-            $this->options = array_merge($this->options, $key);
-        } else {
-            $this->options[$key] = $value;
-        }
+        $this->options[$key] = $value;
 
         return $this;
     }
 
     protected function setUpOptions()
     {
-        if ($this->options['bordered']) {
+        if ($this->options['show_bordered']) {
             $this->tableCollapse(false);
         }
     }
@@ -791,7 +706,7 @@ HTML;
     {
         $this->tools->disableBatchActions($disable);
 
-        return $this->option('row_selector', ! $disable);
+        return $this->option('show_row_selector', ! $disable);
     }
 
     /**
@@ -811,7 +726,7 @@ HTML;
      */
     public function disableCreateButton(bool $disable = true)
     {
-        return $this->option('create_button', ! $disable);
+        return $this->option('show_create_button', ! $disable);
     }
 
     /**
@@ -831,7 +746,7 @@ HTML;
      */
     public function allowCreateButton()
     {
-        return $this->options['create_button'];
+        return $this->options['show_create_button'];
     }
 
     /**
@@ -855,11 +770,23 @@ HTML;
     /**
      * Get or set resource path.
      *
-     * @return string
+     * @param string $path
+     *
+     * @return $this|string
      */
-    public function resource()
+    public function resource(string $path = null)
     {
-        return $this->resourcePath;
+        if ($path === null) {
+            return $this->resourcePath ?: (
+            $this->resourcePath = url(app('request')->getPathInfo())
+            );
+        }
+
+        if (! empty($path)) {
+            $this->resourcePath = admin_url($path);
+        }
+
+        return $this;
     }
 
     /**
@@ -872,6 +799,32 @@ HTML;
     public static function make(...$params)
     {
         return new static(...$params);
+    }
+
+    /**
+     * Enable responsive tables.
+     *
+     * @see https://github.com/nadangergeo/RWD-Table-Patterns
+     *
+     * @return Responsive
+     *
+     * @deprecated 即将在2.0版本中废弃
+     */
+    public function responsive()
+    {
+        if (! $this->responsive) {
+            $this->responsive = new Responsive($this);
+        }
+
+        return $this->responsive;
+    }
+
+    /**
+     * @return bool
+     */
+    public function allowResponsive()
+    {
+        return $this->responsive ? true : false;
     }
 
     /**
@@ -901,9 +854,11 @@ HTML;
      *
      * @return $this
      */
-    public function with(array $variables)
+    public function with($variables = [])
     {
-        return $this->addVariables($variables);
+        $this->variables = $variables;
+
+        return $this;
     }
 
     /**
@@ -911,26 +866,27 @@ HTML;
      *
      * @return array
      */
-    protected function defaultVariables()
+    protected function variables()
     {
-        return [
-            'grid'    => $this,
-            'tableId' => $this->getTableId(),
-        ];
+        $this->variables['grid'] = $this;
+        $this->variables['tableId'] = $this->getTableId();
+
+        return $this->variables;
     }
 
     /**
      * Set a view to render.
      *
      * @param string $view
-     *
-     * @return $this
+     * @param array  $variables
      */
-    public function view($view)
+    public function view($view, $variables = [])
     {
-        $this->view = $view;
+        if (! empty($variables)) {
+            $this->with($variables);
+        }
 
-        return $this;
+        $this->view = $view;
     }
 
     /**
@@ -970,48 +926,9 @@ HTML;
      */
     public function setResource($path)
     {
-        $this->resourcePath = admin_url($path);
+        $this->resourcePath = $path;
 
         return $this;
-    }
-
-    /**
-     * 设置是否显示.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function show(bool $value = true)
-    {
-        $this->show = $value;
-
-        return $this;
-    }
-
-    /**
-     * 是否显示横向滚动条.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function scrollbarX(bool $value = true)
-    {
-        $this->options['scrollbar_x'] = $value;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function formatTableParentClass()
-    {
-        $tableCollaps = $this->option('table_collapse') ? 'table-collapse' : '';
-        $scrollbarX = $this->option('scrollbar_x') ? 'table-scrollbar-x' : '';
-
-        return "table-responsive table-wrapper complex-container table-middle mt-1 {$tableCollaps} {$scrollbarX}";
     }
 
     /**
@@ -1021,50 +938,19 @@ HTML;
      */
     public function render()
     {
-        $this->callComposing();
-        $this->build();
-        $this->applyFixColumns();
-        $this->setUpOptions();
-        $this->addFilterScript();
-        $this->addScript();
+        try {
+            $this->callComposing();
+
+            $this->build();
+
+            $this->applyFixColumns();
+
+            $this->setUpOptions();
+        } catch (\Throwable $e) {
+            return Admin::makeExceptionHandler()->handle($e);
+        }
 
         return $this->doWrap();
-    }
-
-    public function getView()
-    {
-        if ($this->async && $this->hasFixColumns()) {
-            return 'admin::grid.async-fixed-table';
-        }
-
-        return $this->view;
-    }
-
-    protected function addScript()
-    {
-        if ($this->async && ! $this->isAsyncRequest()) {
-            $query = static::ASYNC_NAME;
-            $url = Helper::fullUrlWithoutQuery(['_pjax']);
-            $url = Helper::urlWithQuery($url, [static::ASYNC_NAME => 1]);
-
-            $options = [
-                'selector'  => ".async-{$this->getTableId()}",
-                'queryName' => $query,
-                'url'       => $url,
-            ];
-
-            if ($this->hasFixColumns()) {
-                $options['loadingStyle'] = 'height:140px;';
-            }
-
-            $options = json_encode($options);
-
-            Admin::script(
-                <<<JS
-Dcat.grid.async({$options}).render()
-JS
-            );
-        }
     }
 
     /**
@@ -1072,17 +958,13 @@ JS
      */
     protected function doWrap()
     {
-        if (! $this->show) {
-            return;
-        }
-
-        $view = view($this->getView(), $this->variables());
+        $view = view($this->view, $this->variables());
 
         if (! $wrapper = $this->wrapper) {
             return $view->render();
         }
 
-        return Helper::render($wrapper($view));
+        return $wrapper($view);
     }
 
     /**
@@ -1112,10 +994,5 @@ JS
         }
 
         return $this->addColumn($method, $arguments[0] ?? null);
-    }
-
-    public function __toString()
-    {
-        return (string) $this->render();
     }
 }

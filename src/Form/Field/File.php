@@ -4,26 +4,38 @@ namespace Dcat\Admin\Form\Field;
 
 use Dcat\Admin\Contracts\UploadField as UploadFieldInterface;
 use Dcat\Admin\Form\Field;
+use Dcat\Admin\Form\NestedForm;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Support\JavaScript;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class File extends Field implements UploadFieldInterface
 {
-    use WebUploader,
-        UploadField;
+    use WebUploader, UploadField;
+
+    protected static $css = [
+        '@webuploader',
+    ];
+
+    protected static $js = [
+        '@webuploader',
+    ];
+
+    protected $containerId;
 
     /**
-     * @var array
+     * @param string $column
+     * @param array  $arguments
      */
-    protected $options = ['events' => []];
-
     public function __construct($column, $arguments = [])
     {
         parent::__construct($column, $arguments);
 
-        $this->setUpDefaultOptions();
+        $this->setupDefaultOptions();
+
+        $this->containerId = $this->generateId();
     }
 
     public function setElementName($name)
@@ -85,7 +97,9 @@ class File extends Field implements UploadFieldInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @param string $file
+     *
+     * @return mixed|string
      */
     protected function prepareInputValue($file)
     {
@@ -99,28 +113,36 @@ class File extends Field implements UploadFieldInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @param string|null $relationName
+     * @param string      $relationPrimaryKey
+     *
+     * @return $this
      */
-    public function setRelation(array $options = [])
+    public function setNestedFormRelation(?string $relationName, $relationPrimaryKey)
     {
-        $this->options['formData']['_relation'] = [$options['relation'], $options['key']];
+        $this->options['formData']['_relation'] = [$relationName, $relationPrimaryKey];
+
+        $this->containerId .= NestedForm::DEFAULT_KEY_NAME;
+        $this->id .= NestedForm::DEFAULT_KEY_NAME;
 
         return $this;
     }
 
     /**
-     * {@inheritDoc}
+     * Set field as disabled.
+     *
+     * @return $this
      */
-    public function disable(bool $value = true)
+    public function disable()
     {
-        $this->options['disabled'] = $value;
+        $this->options['disabled'] = true;
 
         return $this;
     }
 
     protected function formatFieldData($data)
     {
-        return Helper::array($this->getValueFromData($data));
+        return Helper::array(Arr::get($data, $this->column));
     }
 
     /**
@@ -133,7 +155,7 @@ class File extends Field implements UploadFieldInterface
         foreach (Helper::array($this->value()) as $value) {
             $previews[] = [
                 'id'   => $value,
-                'path' => Helper::basename($value),
+                'path' => basename($value),
                 'url'  => $this->objectUrl($value),
             ];
         }
@@ -147,7 +169,7 @@ class File extends Field implements UploadFieldInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @return string
      */
     public function render()
     {
@@ -159,14 +181,72 @@ class File extends Field implements UploadFieldInterface
 
         $this->forceOptions();
         $this->formatValue();
+        $this->addScript();
 
         $this->addVariables([
             'fileType'      => $this->options['isImage'] ? '' : 'file',
+            'containerId'   => $this->containerId,
             'showUploadBtn' => ($this->options['autoUpload'] ?? false) ? false : true,
-            'options'       => JavaScript::format($this->options),
         ]);
 
         return parent::render();
+    }
+
+    protected function addScript()
+    {
+        $newButton = trans('admin.uploader.add_new_media');
+        $options = JavaScript::format($this->options);
+
+        $this->script = <<<JS
+(function () {
+    var uploader, 
+        newPage, 
+        cID = replaceNestedFormIndex('#{$this->containerId}'),
+        ID = replaceNestedFormIndex('#{$this->id}'),
+        options = {$options};
+
+    init();
+
+    function init() {
+        var opts = $.extend({
+            selector: cID,
+            addFileButton: cID+' .add-file-button',
+            inputSelector: ID,
+        }, options);
+
+        opts.upload = $.extend({
+            pick: {
+                id: cID+' .file-picker',
+                name: '_file_',
+                label: '<i class="feather icon-folder"></i>&nbsp; {$newButton}'
+            },
+            dnd: cID+' .dnd-area',
+            paste: cID+' .web-uploader'
+        }, opts);
+
+        uploader = Dcat.Uploader(opts);
+        uploader.build();
+        uploader.preview();
+
+        function resize() {
+            setTimeout(function () {
+                if (! uploader) return;
+
+                uploader.refreshButton();
+                resize();
+
+                if (! newPage) {
+                    newPage = 1;
+                    $(document).one('pjax:complete', function () {
+                        uploader = null;
+                    });
+                }
+            }, 250);
+        }
+        resize();
+    }
+})();
+JS;
     }
 
     /**
@@ -175,44 +255,17 @@ class File extends Field implements UploadFieldInterface
     protected function formatValue()
     {
         if ($this->value !== null) {
-            $this->value = implode(',', Helper::array($this->value));
+            $this->value = implode(',', $this->value);
         } elseif (is_array($this->default)) {
             $this->default = implode(',', $this->default);
         }
     }
 
     /**
-     * Webuploader 事件监听.
-     *
-     * @see http://fex.baidu.com/webuploader/doc/index.html#WebUploader_Uploader_events
-     *
-     * @param string $event
-     * @param string $script
-     * @param bool   $once
-     *
-     * @return $this
+     * @return string
      */
-    public function on(string $event, string $script, bool $once = false)
+    protected function generateId()
     {
-        $script = JavaScript::make($script);
-
-        $this->options['events'][] = compact('event', 'script', 'once');
-
-        return $this;
-    }
-
-    /**
-     * Webuploader 事件监听(once).
-     *
-     * @see http://fex.baidu.com/webuploader/doc/index.html#WebUploader_Uploader_events
-     *
-     * @param string $event
-     * @param string $script
-     *
-     * @return $this
-     */
-    public function once(string $event, string $script)
-    {
-        return $this->on($event, $script, true);
+        return 'file-'.Str::random(8);
     }
 }

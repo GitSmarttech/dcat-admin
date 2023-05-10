@@ -42,7 +42,6 @@ class ActionCommand extends GeneratorCommand
         'grid-tool'  => 'Grid',
         'form-tool'  => 'Form',
         'show-tool'  => 'Show',
-        'tree-row'   => 'Tree',
         'tree-tool'  => 'Tree',
     ];
 
@@ -80,7 +79,6 @@ class ActionCommand extends GeneratorCommand
             'grid-tool',
             'form-tool',
             'show-tool',
-            'tree-row',
             'tree-tool',
         ];
     }

@@ -9,6 +9,9 @@ namespace Dcat\Admin\Form\Field;
  */
 class Listbox extends MultipleSelect
 {
+    public static $js = '@jquery.bootstrap-duallistbox';
+    public static $css = '@jquery.bootstrap-duallistbox';
+
     protected $settings = [];
 
     public function settings(array $settings)
@@ -28,7 +31,11 @@ class Listbox extends MultipleSelect
             'filterPlaceHolder' => trans('admin.listbox.filter_placeholder'),
         ]);
 
-        $this->addVariables(['settings' => $settings]);
+        $settings = json_encode($settings);
+
+        $this->script = <<<JS
+$("{$this->getElementClassSelector()}").bootstrapDualListbox($settings);
+JS;
 
         return parent::render();
     }

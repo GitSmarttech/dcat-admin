@@ -18,11 +18,13 @@
         <link rel="shortcut icon" href="{{ $favicon }}">
     @endif
 
-    {!! admin_section(Dcat\Admin\Admin::SECTION['HEAD']) !!}
+    {!! admin_section(\AdminSection::HEAD) !!}
 
     {!! Dcat\Admin\Admin::asset()->headerJsToHtml() !!}
 
     {!! Dcat\Admin\Admin::asset()->cssToHtml() !!}
+
+    <!--[if IE]><![endif]-->
 </head>
 
-@extends('admin::layouts.container')
+@extends('admin::layouts.vertical')

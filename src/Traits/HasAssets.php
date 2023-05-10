@@ -2,8 +2,34 @@
 
 namespace Dcat\Admin\Traits;
 
+use Dcat\Admin\Support\Helper;
+
 trait HasAssets
 {
+    /**
+     * @var array
+     */
+    protected static $html = [];
+
+    /**
+     * @param string $html
+     *
+     * @return null|string
+     */
+    public static function html($html = '')
+    {
+        if (! empty($html)) {
+            static::$html = array_merge(
+                static::$html,
+                array_map([Helper::class, 'render'], (array) $html)
+            );
+
+            return;
+        }
+
+        return implode('', array_unique(static::$html));
+    }
+
     /**
      * @return \Dcat\Admin\Layout\Asset
      */
@@ -13,14 +39,13 @@ trait HasAssets
     }
 
     /**
-     * @param string|array $name
-     * @param array $params
+     * @param string $name
      *
      * @return void
      */
-    public static function requireAssets($name, array $params = [])
+    public static function collectAssets(string $name)
     {
-        static::asset()->require($name, $params);
+        static::asset()->collect($name);
     }
 
     /**
@@ -39,11 +64,12 @@ trait HasAssets
      * Set base css.
      *
      * @param array $css
-     * @param bool $merge
+     *
+     * @return array|void
      */
-    public static function baseCss(array $css, bool $merge = true)
+    public static function baseCss(array $css)
     {
-        static::asset()->baseCss($css, $merge);
+        static::asset()->baseCss($css);
     }
 
     /**
@@ -62,24 +88,24 @@ trait HasAssets
      * Add js.
      *
      * @param string|array $js
-     * @param bool $merge
      *
      * @return void
      */
-    public static function headerJs($js, bool $merge = true)
+    public static function headerJs($js)
     {
-        static::asset()->headerJs($js, $merge);
+        static::asset()->headerJs($js);
     }
 
     /**
      * Set base js.
      *
      * @param array $js
-     * @param bool $merge
+     *
+     * @return void
      */
-    public static function baseJs(array $js, bool $merge = true)
+    public static function baseJs(array $js)
     {
-        static::asset()->baseJs($js, $merge);
+        static::asset()->baseJs($js);
     }
 
     /**

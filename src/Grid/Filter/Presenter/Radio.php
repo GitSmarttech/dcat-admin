@@ -65,7 +65,7 @@ class Radio extends Presenter
     /**
      * @return array
      */
-    public function defaultVariables(): array
+    public function variables(): array
     {
         $this->prepare();
 

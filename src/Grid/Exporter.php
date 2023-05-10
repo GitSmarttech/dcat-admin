@@ -60,6 +60,22 @@ class Exporter
     public function __construct(Grid $grid)
     {
         $this->grid = $grid;
+
+        $this->setQueryName($grid->getName().$this->queryName);
+    }
+
+    /**
+     * Set export query name.
+     *
+     * @param $name
+     *
+     * @return $this
+     */
+    public function setQueryName($name)
+    {
+        $this->queryName = $name;
+
+        return $this;
     }
 
     /**
@@ -132,9 +148,9 @@ class Exporter
      *
      * @return string
      */
-    public function getQueryName(): string
+    public function queryName(): string
     {
-        return $this->grid->makeName($this->queryName);
+        return $this->queryName;
     }
 
     /**
@@ -236,7 +252,7 @@ class Exporter
             $query = "$scope:$args";
         }
 
-        return [$this->getQueryName() => $query];
+        return [$this->queryName => $query];
     }
 
     /**

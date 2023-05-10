@@ -2,9 +2,7 @@
 
 namespace Dcat\Admin\Grid\Concerns;
 
-use Dcat\Admin\Admin;
 use Dcat\Admin\Grid\Column;
-use Dcat\Admin\Grid\Events\ApplyQuickSearch;
 use Dcat\Admin\Grid\Model;
 use Dcat\Admin\Grid\Tools;
 use Dcat\Admin\Support\Helper;
@@ -49,18 +47,22 @@ trait HasQuickSearch
         return tap(new Tools\QuickSearch(), function ($search) {
             $this->quickSearch = $search;
 
-            $search->setGrid($this);
+            $this->setQuickSearchQueryName();
 
-            $this->addQuickSearchScript();
+            $search->setGrid($this);
         });
     }
 
     /**
-     * @return bool
+     * @param string $gridName
      */
-    public function allowQuickSearch()
+    public function setQuickSearchQueryName()
     {
-        return $this->quickSearch ? true : false;
+        if ($this->quickSearch) {
+            $this->quickSearch->setQueryName(
+                $this->getName().$this->quickSearch->getQueryName()
+            );
+        }
     }
 
     /**
@@ -94,13 +96,11 @@ trait HasQuickSearch
             return;
         }
 
-        $query = request($this->quickSearch->getQueryName());
+        $query = request()->get($this->quickSearch->getQueryName());
 
         if ($query === '' || $query === null) {
             return;
         }
-
-        $this->fireOnce(new ApplyQuickSearch([$query]));
 
         // 树表格子节点忽略查询条件
         $this->model()
@@ -326,19 +326,5 @@ trait HasQuickSearch
         }
 
         Helper::withQueryCondition($query, $column, $method, [$operator, $value]);
-    }
-
-    protected function addQuickSearchScript()
-    {
-        if ($this->isAsyncRequest()) {
-            $url = Helper::fullUrlWithoutQuery([
-                '_pjax',
-                $this->quickSearch->getQueryName(),
-                static::ASYNC_NAME,
-                $this->model()->getPageName(),
-            ]);
-
-            Admin::script("$('.quick-search-form').attr('action', '{$url}');", true);
-        }
     }
 }

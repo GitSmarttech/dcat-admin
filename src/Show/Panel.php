@@ -3,14 +3,11 @@
 namespace Dcat\Admin\Show;
 
 use Dcat\Admin\Show;
-use Dcat\Admin\Traits\HasVariables;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Support\Collection;
 
 class Panel implements Renderable
 {
-    use HasVariables;
-
     /**
      * The view to be rendered.
      *
@@ -24,6 +21,13 @@ class Panel implements Renderable
      * @var Collection
      */
     protected $fields;
+
+    /**
+     * Variables in the view.
+     *
+     * @var array
+     */
+    protected $data;
 
     /**
      * Parent show instance.
@@ -44,15 +48,15 @@ class Panel implements Renderable
     {
         $this->parent = $show;
 
-        $this->initVariables();
+        $this->initData();
     }
 
     /**
      * Initialize view data.
      */
-    protected function initVariables()
+    protected function initData()
     {
-        $this->variables = [
+        $this->data = [
             'fields' => new Collection(),
             'tools'  => new Tools($this),
             'rows'   => $this->parent->rows(),
@@ -80,7 +84,7 @@ class Panel implements Renderable
      *
      * @return Show
      */
-    public function parent()
+    public function getParent()
     {
         return $this->parent;
     }
@@ -95,7 +99,7 @@ class Panel implements Renderable
      */
     public function style($style = 'info')
     {
-        $this->variables['style'] = $style;
+        $this->data['style'] = $style;
 
         return $this;
     }
@@ -109,7 +113,7 @@ class Panel implements Renderable
      */
     public function title($title)
     {
-        $this->variables['title'] = $title;
+        $this->data['title'] = $title;
 
         return $this;
     }
@@ -137,7 +141,7 @@ class Panel implements Renderable
      */
     public function with(array $variables = [])
     {
-        $this->variables = array_merge($this->variables, $variables);
+        $this->data = array_merge($this->data, $variables);
 
         return $this;
     }
@@ -170,10 +174,10 @@ class Panel implements Renderable
     public function tools($callable = null)
     {
         if ($callable === null) {
-            return $this->variables['tools'];
+            return $this->data['tools'];
         }
 
-        call_user_func($callable, $this->variables['tools']);
+        call_user_func($callable, $this->data['tools']);
     }
 
     /**
@@ -185,7 +189,7 @@ class Panel implements Renderable
      */
     public function fill($fields)
     {
-        $this->variables['fields'] = $fields;
+        $this->data['fields'] = $fields;
 
         return $this;
     }
@@ -205,7 +209,7 @@ class Panel implements Renderable
      */
     protected function doWrap()
     {
-        $view = view($this->view, $this->variables());
+        $view = view($this->view, $this->data);
 
         if (! $wrapper = $this->wrapper) {
             return "<div class='card dcat-box'>{$view->render()}</div>";

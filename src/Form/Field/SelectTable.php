@@ -10,7 +10,10 @@ use Dcat\Admin\Widgets\DialogTable;
 class SelectTable extends Field
 {
     use PlainInput;
-    use CanLoadFields;
+
+    protected static $js = [
+        '@select-table',
+    ];
 
     /**
      * @var DialogTable
@@ -18,10 +21,6 @@ class SelectTable extends Field
     protected $dialog;
 
     protected $style = 'primary';
-
-    protected $visibleColumn;
-
-    protected $key;
 
     public function __construct($column, $arguments = [])
     {
@@ -77,22 +76,6 @@ class SelectTable extends Field
     }
 
     /**
-     * 设置选中的key以及标题字段.
-     *
-     * @param $visibleColumn
-     * @param $key
-     *
-     * @return $this
-     */
-    public function pluck(?string $visibleColumn, ?string $key = 'id')
-    {
-        $this->visibleColumn = $visibleColumn;
-        $this->key = $key;
-
-        return $this;
-    }
-
-    /**
      * @param array $options
      *
      * @return $this
@@ -115,7 +98,7 @@ class SelectTable extends Field
      */
     public function model(string $model, string $id = 'id', string $text = 'title')
     {
-        return $this->pluck($text, $id)->options(function ($v) use ($model, $id, $text) {
+        return $this->options(function ($v) use ($model, $id, $text) {
             if (! $v) {
                 return [];
             }
@@ -126,7 +109,7 @@ class SelectTable extends Field
 
     protected function formatOptions()
     {
-        $value = Helper::array($this->value());
+        $value = Helper::array(old($this->column, $this->value()));
 
         if ($this->options instanceof \Closure) {
             $this->options = $this->options->call($this->values(), $value, $this);
@@ -142,30 +125,28 @@ class SelectTable extends Field
             }
         }
 
-        $this->options = $values;
+        $this->options = json_encode($values);
     }
 
-    /**
-     * @return string
-     */
-    protected function defaultPlaceholder()
+    protected function addScript()
     {
-        return trans('admin.choose').' '.$this->label;
+        $this->script .= <<<JS
+Dcat.grid.SelectTable({
+    dialog: replaceNestedFormIndex('#{$this->dialog->id()}'),
+    container: replaceNestedFormIndex('#{$this->getAttribute('id')}'),
+    input: replaceNestedFormIndex('#hidden-{$this->id}'),
+    values: {$this->options},
+});
+JS;
     }
 
     protected function setUpTable()
     {
         $this->dialog
+            ->id($this->getElementId())
+            ->runScript(false)
             ->footer($this->renderFooter())
             ->button($this->renderButton());
-
-        // 设置选中的字段和待显示的标题字段
-        $this->dialog
-            ->getTable()
-            ->getRenderable()
-            ->payload([
-                LazyRenderable::ROW_SELECTOR_COLUMN_NAME => [$this->key, $this->visibleColumn],
-            ]);
     }
 
     public function render()
@@ -173,19 +154,25 @@ class SelectTable extends Field
         $this->setUpTable();
         $this->formatOptions();
 
+        $name = $this->getElementName();
+
         $this->prepend('<i class="feather icon-arrow-up"></i>')
             ->defaultAttribute('class', 'form-control '.$this->getElementClassString())
             ->defaultAttribute('type', 'text')
-            ->defaultAttribute('name', $this->getElementName());
+            ->defaultAttribute('name', $name)
+            ->defaultAttribute('id', 'container-'.$this->getElementId());
 
         $this->addVariables([
-            'prepend'        => $this->prepend,
-            'append'         => $this->append,
-            'style'          => $this->style,
-            'dialog'         => $this->dialog->render(),
-            'placeholder'    => $this->placeholder(),
-            'dialogSelector' => $this->dialog->getElementSelector(),
+            'prepend'     => $this->prepend,
+            'append'      => $this->append,
+            'style'       => $this->style,
+            'dialog'      => $this->dialog->render(),
+            'placeholder' => $this->placeholder(),
         ]);
+
+        $this->script = $this->dialog->getScript();
+
+        $this->addScript();
 
         return parent::render();
     }

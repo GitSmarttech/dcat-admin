@@ -2,12 +2,11 @@
 
 namespace Dcat\Admin\Models;
 
-use Dcat\Admin\Admin;
 use Illuminate\Support\Facades\Cache;
 
 trait MenuCache
 {
-    protected $cacheKey = 'dcat-admin-menus-%d-%s';
+    protected $cacheKey = 'dcat-admin-menus-%d';
 
     /**
      * Get an item from the cache, or execute the given Closure and store the result.
@@ -42,7 +41,7 @@ trait MenuCache
      */
     protected function getCacheKey()
     {
-        return sprintf($this->cacheKey, (int) static::withPermission(), Admin::app()->getName());
+        return sprintf($this->cacheKey, (int) static::withPermission());
     }
 
     /**

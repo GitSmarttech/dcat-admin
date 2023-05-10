@@ -5,6 +5,11 @@ namespace Dcat\Admin\Grid;
 abstract class BatchAction extends GridAction
 {
     /**
+     * @var string
+     */
+    public $selectorPrefix = '.grid-batch-action-';
+
+    /**
      * {@inheritdoc}
      */
     protected function actionScript()
@@ -31,6 +36,6 @@ JS;
      */
     public function getSelectedKeysScript()
     {
-        return "Dcat.grid.selected('{$this->parent->getName()}')";
+        return "Dcat.grid.selected('{$this->parent->getName()}');";
     }
 }

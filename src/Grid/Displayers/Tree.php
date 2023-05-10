@@ -29,7 +29,7 @@ Dcat.grid.Tree({
     showNextPage: {$showNextPage},
     pageQueryName: '{$pageName}',
     parentIdQueryName: '{$model->getParentIdQueryName()}',
-    depthQueryName: '{$model->getDepthQueryName()}',
+    tierQueryName: '{$model->getTierQueryName()}',
 });
 JS;
         Admin::script($script);
@@ -42,11 +42,11 @@ JS;
         $key = $this->getKey();
         $tableId = $this->grid->getTableId();
 
-        $depth = $this->grid->model()->getDepthFromRequest();
-        $indents = str_repeat(' &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ', $depth);
+        $tier = $this->grid->model()->getTierFromRequest();
+        $indents = str_repeat(' &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ', $tier);
 
         return <<<EOT
-<a href="javascript:void(0)" class="{$tableId}-grid-load-children" data-depth="{$depth}" data-inserted="0" data-key="{$key}">
+<a href="javascript:void(0)" class="{$tableId}-grid-load-children" data-tier="{$tier}" data-inserted="0" data-key="{$key}">
    {$indents}<i class="fa fa-angle-right"></i> &nbsp; {$this->value}
 </a>
 EOT;

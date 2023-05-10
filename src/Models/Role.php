@@ -18,22 +18,19 @@ class Role extends Model
     protected $fillable = ['name', 'slug'];
 
     /**
-     * {@inheritDoc}
+     * Create a new Eloquent model instance.
+     *
+     * @param array $attributes
      */
     public function __construct(array $attributes = [])
-    {
-        $this->init();
-
-        parent::__construct($attributes);
-    }
-
-    protected function init()
     {
         $connection = config('admin.database.connection') ?: config('database.default');
 
         $this->setConnection($connection);
 
         $this->setTable(config('admin.database.roles_table'));
+
+        parent::__construct($attributes);
     }
 
     /**
@@ -61,19 +58,7 @@ class Role extends Model
 
         $relatedModel = config('admin.database.permissions_model');
 
-        return $this->belongsToMany($relatedModel, $pivotTable, 'role_id', 'permission_id')->withTimestamps();
-    }
-
-    /**
-     * @return BelongsToMany
-     */
-    public function menus(): BelongsToMany
-    {
-        $pivotTable = config('admin.database.role_menu_table');
-
-        $relatedModel = config('admin.database.menu_model');
-
-        return $this->belongsToMany($relatedModel, $pivotTable, 'role_id', 'menu_id')->withTimestamps();
+        return $this->belongsToMany($relatedModel, $pivotTable, 'role_id', 'permission_id');
     }
 
     /**

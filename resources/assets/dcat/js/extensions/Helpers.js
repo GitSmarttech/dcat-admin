@@ -224,7 +224,7 @@ export default class Helpers {
                 title = title.substr(0, 50) + '...';
             }
 
-            layer.open({
+            win.layer.open({
                 type: 1,
                 shade: 0.2,
                 title: false,
@@ -241,7 +241,7 @@ export default class Helpers {
         };
         img.onerror = function () {
             Dcat.loading(false);
-            Dcat.error(Dcat.lang.trans('no_preview'))
+            Dcat.warning('预览失败');
         };
     }
 
@@ -251,7 +251,9 @@ export default class Helpers {
 
         $.ajax(url).then(function (data) {
             done(
-                Dcat.assets.resolveHtml(data, Dcat.triggerReady).render()
+                Dcat.assets.executeScripts(data, function () {
+                    Dcat.triggerReady();
+                }).render()
             );
         }, function (a, b, c) {
             if (error) {
@@ -262,59 +264,5 @@ export default class Helpers {
 
             Dcat.handleAjaxError(a, b, c);
         })
-    }
-
-    /**
-     * 联动多个字段.
-     *
-     * @param _this
-     * @param options
-     */
-    loadFields(_this, options) {
-        let refreshOptions = function(url, target) {
-            Dcat.loading();
-
-            $.ajax(url).then(function(data) {
-                Dcat.loading(false);
-                target.find("option").remove();
-
-                $.map(data, function (d) {
-                    target.append(new Option(d[options.textField], d[options.idField], false, false));
-                });
-
-                $(target).val(String(target.data('value')).split(',')).trigger('change');
-            });
-        };
-
-        let promises = [],
-            values = [];
-
-        if (! options.values) {
-            $(_this).find('option:selected').each(function () {
-                if (String(this.value) === '0' || this.value) {
-                    values.push(this.value)
-                }
-            });
-        } else {
-            values = options.values;
-            if (typeof values === 'string') {
-                values = [values];
-            }
-        }
-
-        if (! values.length) {
-            return;
-        }
-
-        options.fields.forEach(function(field, index){
-            var target = $(_this).closest(options.group).find('.' + options.fields[index]);
-
-            if (! values.length) {
-                return;
-            }
-            promises.push(refreshOptions(options.urls[index] + (options.urls[index].match(/\?/)?'&':'?') + "q="+ values.join(','), target));
-        });
-
-        $.when(promises).then(function() {});
     }
 }

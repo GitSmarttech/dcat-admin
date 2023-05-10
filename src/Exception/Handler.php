@@ -2,41 +2,19 @@
 
 namespace Dcat\Admin\Exception;
 
-use Dcat\Admin\Contracts\ExceptionHandler;
 use Dcat\Admin\Support\Helper;
-use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\ViewErrorBag;
 
-class Handler implements ExceptionHandler
+class Handler
 {
-    /**
-     * 处理异常.
-     *
-     * @param \Throwable $e
-     *
-     * @return array|string|void
-     */
     public function handle(\Throwable $e)
     {
-        if ($e instanceof HttpResponseException) {
-            throw $e;
-        }
-
         $this->report($e);
 
         return $this->render($e);
     }
 
-    /**
-     * 显示异常信息.
-     *
-     * @param \Throwable $exception
-     *
-     * @return array|string|void
-     *
-     * @throws \Throwable
-     */
     public function render(\Throwable $exception)
     {
         if (config('app.debug')) {
@@ -61,21 +39,23 @@ class Handler implements ExceptionHandler
         return view('admin::partials.exception', compact('errors'))->render();
     }
 
-    /**
-     * 上报异常信息.
-     *
-     * @param \Throwable $e
-     */
     public function report(\Throwable $e)
     {
-        report($e);
+        $this->getLogger()->error($this->convertExceptionToString($e));
     }
 
-    /**
-     * @param string $path
-     *
-     * @return mixed
-     */
+    protected function convertExceptionToString(\Throwable $e)
+    {
+        return sprintf(
+            "[%s] %s, called in %s(%s)\n%s",
+            get_class($e),
+            $e->getMessage(),
+            $this->replaceBasePath($e->getFile()),
+            $e->getLine(),
+            $this->replaceBasePath($e->getTraceAsString())
+        );
+    }
+
     protected function replaceBasePath(string $path)
     {
         return str_replace(
@@ -83,5 +63,10 @@ class Handler implements ExceptionHandler
             '',
             str_replace('\\', '/', $path)
         );
+    }
+
+    protected function getLogger()
+    {
+        return logger();
     }
 }

@@ -1,10 +1,9 @@
 {
-    "name": "{package}",
-    "alias": "{alias}",
-    "description": "Description...",
+    "name": ":package",
+    "description": "description...",
     "type": "library",
     "keywords": ["dcat-admin", "extension"],
-    "homepage": "https://github.com/{package}",
+    "homepage": "https://github.com/:package",
     "license": "MIT",
     "authors": [
         {
@@ -14,19 +13,14 @@
     ],
     "require": {
         "php": ">=7.1.0",
-        "dcat/laravel-admin": "~2.0"
+        "dcat/laravel-admin": "*"
     },
     "autoload": {
         "psr-4": {
-            "{namespace}": "src/"
-        }
-    },
-    "extra": {
-        "dcat-admin": "{namespace}{className}ServiceProvider",
-        "laravel": {
-            "providers": [
-                "{namespace}{className}ServiceProvider"
-            ]
-        }
+            ":namespace": "src/"
+        },
+         "files": [
+            "src/bootstrap.php"
+        ]
     }
 }

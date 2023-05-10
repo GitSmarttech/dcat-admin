@@ -36,7 +36,7 @@ class Menu extends Model implements Sortable
      *
      * @var array
      */
-    protected $fillable = ['parent_id', 'order', 'title', 'icon', 'uri', 'extension', 'show'];
+    protected $fillable = ['parent_id', 'order', 'title', 'icon', 'uri', 'permission_id'];
 
     /**
      * Create a new Eloquent model instance.
@@ -45,18 +45,13 @@ class Menu extends Model implements Sortable
      */
     public function __construct(array $attributes = [])
     {
-        parent::__construct($attributes);
-
-        $this->init();
-    }
-
-    protected function init()
-    {
         $connection = config('admin.database.connection') ?: config('database.default');
 
         $this->setConnection($connection);
 
         $this->setTable(config('admin.database.menu_table'));
+
+        parent::__construct($attributes);
     }
 
     /**
@@ -70,7 +65,7 @@ class Menu extends Model implements Sortable
 
         $relatedModel = config('admin.database.roles_model');
 
-        return $this->belongsToMany($relatedModel, $pivotTable, 'menu_id', 'role_id')->withTimestamps();
+        return $this->belongsToMany($relatedModel, $pivotTable, 'menu_id', 'role_id');
     }
 
     public function permissions(): BelongsToMany
@@ -79,7 +74,7 @@ class Menu extends Model implements Sortable
 
         $relatedModel = config('admin.database.permissions_model');
 
-        return $this->belongsToMany($relatedModel, $pivotTable, 'menu_id', 'permission_id')->withTimestamps();
+        return $this->belongsToMany($relatedModel, $pivotTable, 'menu_id', 'permission_id');
     }
 
     /**
@@ -87,9 +82,9 @@ class Menu extends Model implements Sortable
      *
      * @param bool $force
      *
-     * @return static[]|\Illuminate\Support\Collection
+     * @return array
      */
-    public function allNodes(bool $force = false)
+    public function allNodes(bool $force = false): array
     {
         if ($force || $this->queryCallbacks) {
             return $this->fetchAll();
@@ -103,9 +98,9 @@ class Menu extends Model implements Sortable
     /**
      * Fetch all elements.
      *
-     * @return static[]|\Illuminate\Support\Collection
+     * @return array
      */
-    public function fetchAll()
+    public function fetchAll(): array
     {
         return $this->withQuery(function ($query) {
             if (static::withPermission()) {

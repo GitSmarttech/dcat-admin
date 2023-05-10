@@ -83,7 +83,7 @@ trait InteractsWithApi
      */
     public function getRequestUrl()
     {
-        return $this->url ?: route(admin_api_route_name('value'));
+        return $this->url ?: route(admin_api_route('value'));
     }
 
     /**
@@ -202,11 +202,11 @@ trait InteractsWithApi
             return;
         }
         loading = 1;
-
+        
         data = $.extend({$this->formatRequestData()}, data || {});
-
-        {$fetching};
-
+        
+        {$fetching};   
+        
         $.ajax({
           url: '{$this->getRequestUrl()}',
           dataType: 'json',
@@ -236,8 +236,7 @@ JS;
     private function formatRequestData()
     {
         $data = [
-            '_key'   => $this->getUriKey(),
-            '_token' => csrf_token(),
+            '_key' => $this->getUriKey(),
         ];
 
         return json_encode(
@@ -254,8 +253,8 @@ JS;
 
         foreach ($this->requestSelectors as $v) {
             $script .= <<<JS
-$('{$v}').on('click', function () {
-    request($(this).data())
+$('{$v}').on('click', function () { 
+    request($(this).data()) 
 });
 JS;
         }

@@ -3,9 +3,7 @@
 namespace Dcat\Admin\Grid\Concerns;
 
 use Closure;
-use Dcat\Admin\Admin;
 use Dcat\Admin\Grid;
-use Dcat\Admin\Support\Helper;
 use Illuminate\Support\Collection;
 
 trait HasFilter
@@ -15,16 +13,21 @@ trait HasFilter
      *
      * @var Grid\Filter
      */
-    protected $filter;
+    protected $__filter;
+
+    /**
+     * @var array
+     */
+    protected $beforeApplyFilterCallbacks = [];
 
     /**
      * Setup grid filter.
      *
      * @return void
      */
-    protected function setUpFilter()
+    protected function setupFilter()
     {
-        $this->filter = new Grid\Filter($this->model());
+        $this->__filter = new Grid\Filter($this->model());
     }
 
     /**
@@ -32,18 +35,18 @@ trait HasFilter
      *
      * @param bool $toArray
      *
-     * @return Collection
+     * @return array|Collection|mixed
      */
-    public function processFilter()
+    public function processFilter($toArray = true)
     {
         $this->callBuilder();
         $this->handleExportRequest();
-
+        $this->callFetchingCallbacks();
         $this->applyQuickSearch();
         $this->applyColumnFilter();
         $this->applySelectorQuery();
 
-        return $this->filter->execute();
+        return $this->__filter->execute($toArray);
     }
 
     /**
@@ -56,12 +59,34 @@ trait HasFilter
     public function filter(Closure $callback = null)
     {
         if ($callback === null) {
-            return $this->filter;
+            return $this->__filter;
         }
 
-        call_user_func($callback, $this->filter);
+        call_user_func($callback, $this->__filter);
 
         return $this;
+    }
+
+    /**
+     * @param Closure $callback
+     *
+     * @return void
+     */
+    public function fetching(\Closure $callback)
+    {
+        $this->beforeApplyFilterCallbacks[] = $callback;
+    }
+
+    /**
+     * @return void
+     */
+    protected function callFetchingCallbacks()
+    {
+        foreach ($this->beforeApplyFilterCallbacks as $callback) {
+            $callback($this);
+        }
+
+        $this->beforeApplyFilterCallbacks = [];
     }
 
     /**
@@ -71,11 +96,11 @@ trait HasFilter
      */
     public function renderFilter()
     {
-        if (! $this->options['filter']) {
+        if (! $this->options['show_filter']) {
             return '';
         }
 
-        return $this->filter->render();
+        return $this->__filter->render();
     }
 
     /**
@@ -85,7 +110,7 @@ trait HasFilter
      */
     public function expandFilter()
     {
-        $this->filter->expand();
+        $this->__filter->expand();
 
         return $this;
     }
@@ -97,9 +122,9 @@ trait HasFilter
      */
     public function disableFilter(bool $disable = true)
     {
-        $this->filter->disableCollapse($disable);
+        $this->__filter->disableCollapse($disable);
 
-        return $this->option('filter', ! $disable);
+        return $this->option('show_filter', ! $disable);
     }
 
     /**
@@ -138,24 +163,5 @@ trait HasFilter
     public function showFilterButton(bool $val = true)
     {
         return $this->disableFilterButton(! $val);
-    }
-
-    protected function addFilterScript()
-    {
-        if (! $this->isAsyncRequest()) {
-            return;
-        }
-
-        Admin::script(
-            <<<JS
-var count = {$this->filter()->countConditions()};
-
-$('.async-{$this->getTableId()}').find('.filter-count').text(count > 0 ? ('('+count+')') : '');
-JS
-        );
-
-        $url = Helper::urlWithoutQuery($this->filter()->urlWithoutFilters(), ['_pjax', static::ASYNC_NAME]);
-
-        Admin::script("$('.grid-filter-form').attr('action', '{$url}');", true);
     }
 }

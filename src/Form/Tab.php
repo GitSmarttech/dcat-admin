@@ -25,16 +25,6 @@ class Tab
     protected $offset = 0;
 
     /**
-     * @var int
-     */
-    protected $columnOffset = 0;
-
-    /**
-     * @var bool
-     */
-    public $hasRows = false;
-
-    /**
      * Tab constructor.
      *
      * @param Form|WidgetForm $form
@@ -52,20 +42,16 @@ class Tab
      * @param string   $title
      * @param \Closure $content
      * @param bool     $active
-     * @param string   $id
      *
      * @return $this
      */
-    public function append($title, \Closure $content, bool $active = false, ?string $id = null)
+    public function append($title, \Closure $content, $active = false)
     {
-        call_user_func($content, $this->form);
+        $fields = $this->collectFields($content);
 
-        $fields = $this->collectFields();
-        $layout = $this->collectColumnLayout();
+        $id = 'tab-form-'.($this->tabs->count() + 1).'-'.mt_rand(0, 9999);
 
-        $id = $id ?: ('tab-form-'.($this->tabs->count() + 1).'-'.mt_rand(0, 9999));
-
-        $this->tabs->push(compact('id', 'title', 'fields', 'active', 'layout'));
+        $this->tabs->push(compact('id', 'title', 'fields', 'active'));
 
         return $this;
     }
@@ -73,18 +59,22 @@ class Tab
     /**
      * Collect fields under current tab.
      *
+     * @param \Closure $content
+     *
      * @return Collection
      */
-    protected function collectFields()
+    protected function collectFields(\Closure $content)
     {
+        call_user_func($content, $this->form);
+
         $fields = clone $this->form->fields();
 
         $all = $fields->toArray();
 
         foreach ($this->form->rows() as $row) {
-            $rowFields = $row->fields()->map(function ($field) {
+            $rowFields = array_map(function ($field) {
                 return $field['element'];
-            });
+            }, $row->fields());
 
             $match = false;
 
@@ -99,8 +89,6 @@ class Tab
                     $match = true;
                 }
             }
-
-            $this->hasRows = true;
         }
 
         $fields = $fields->slice($this->offset);
@@ -108,48 +96,6 @@ class Tab
         $this->offset += $fields->count();
 
         return $fields;
-    }
-
-    protected function collectColumnLayout()
-    {
-        $layout = clone $this->form->layout();
-
-        $this->form->layout()->reset();
-
-        return $layout;
-    }
-
-    /**
-     * Set true for some one tab by title or id.
-     *
-     * @param string $value
-     * @param string $field
-     */
-    public function active(string $value, string $field = 'title')
-    {
-        if ($this->tabs->where($field, $value)->isNotEmpty()) {
-            $this->tabs = $this->tabs->map(function ($item) use ($value, $field) {
-                $item['active'] = $item[$field] === $value;
-
-                return $item;
-            });
-        }
-    }
-
-    /**
-     * Set true for some one tab by key.
-     *
-     * @param int $index
-     */
-    public function activeByIndex(int $index = 0)
-    {
-        if ($this->tabs->offsetExists($index)) {
-            $this->tabs = $this->tabs->map(function ($item, $itemKey) use ($index) {
-                $item['active'] = $itemKey === $index;
-
-                return $item;
-            });
-        }
     }
 
     /**
@@ -193,18 +139,18 @@ class Tab
     if (hash) {
         $('#$elementId .nav-tabs a[href="' + hash + '"]').tab('show');
     }
-
+    
     // Change hash for page-reload
     $('#$elementId .nav-tabs a').on('shown.bs.tab', function (e) {
         history.pushState(null,null, e.target.hash);
     });
-
+    
     if ($('#$elementId .has-error').length) {
         $('#$elementId .has-error').each(function () {
             var tabId = '#'+$(this).closest('.tab-pane').attr('id');
             $('li a[href="'+tabId+'"] i').removeClass('hide');
         });
-
+    
         var first = $('#$elementId .has-error:first').closest('.tab-pane').attr('id');
         $('li a[href="#'+first+'"]').tab('show');
     }

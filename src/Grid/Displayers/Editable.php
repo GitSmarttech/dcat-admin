@@ -78,7 +78,9 @@ $('.{$this->selector}+.save').on("click",function() {
 
     value = tmp.text().replace(new RegExp("<br>","g"), '').replace(new RegExp("&nbsp;","g"), '').trim();
     
-    var data = {};
+    var data = {
+        _method: 'PUT'
+    };
     if (name.indexOf('.') === -1) {
         data[name] = value;
     } else {
@@ -89,19 +91,19 @@ $('.{$this->selector}+.save').on("click",function() {
     }
     
     Dcat.NP.start();
-    $.put({
+    $.ajax({
         url: url,
+        type: "POST",
         data: data,
-        success: function (d) {
-            var msg = d.data.message || d.message;
-            if (d.status) {
+        success: function (data) {
+            if (data.status) {
                 obj.attr('data-value',value).addClass("hidden").prev().html(value);
-                Dcat.success(msg);
+                Dcat.success(data.message);
                 
                 refresh && Dcat.reload()
             } else {
                 obj.prev().html(old_value);
-                Dcat.error(msg);
+                Dcat.error(data.message);
             }
         },
         error:function(a,b,c) {

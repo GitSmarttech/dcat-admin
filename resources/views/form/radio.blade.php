@@ -1,8 +1,8 @@
-<div class="{{$viewClass['form-group']}}" >
+<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}" >
 
-    <label class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
+    <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
 
-    <div class="{{$viewClass['field']}}">
+    <div class="{{$viewClass['field']}}" id="{{ $id }}">
 
         @include('admin::form.error')
 
@@ -14,26 +14,3 @@
 
     </div>
 </div>
-
-@if(! empty($loads))
-<script once>
-    var selector = '{!! $selector !!}',
-        fields = '{!! $loads['fields'] !!}'.split('^'),
-        urls = '{!! $loads['urls'] !!}'.split('^');
-
-    $(document).off('change', selector);
-    $(document).on('change', selector, function () {
-        var values = this.value;
-
-        Dcat.helpers.loadFields(this, {
-            group: '.fields-group',
-            urls: urls,
-            fields: fields,
-            textField: "{{ $loads['textField'] }}",
-            idField: "{{ $loads['idField'] }}",
-            values: values,
-        });
-    });
-    $(selector+':checked').trigger('change')
-</script>
-@endif

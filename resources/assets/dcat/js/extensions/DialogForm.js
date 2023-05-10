@@ -7,9 +7,9 @@ if (top && w.layer) {
 
 export default class DialogForm {
     constructor(Dcat, options) {
-        let self = this, nullFun = function () {};
+        let _this = this, nullFun = function (a, b) {};
 
-        self.options = $.extend({
+        _this.options = $.extend({
             // 弹窗标题
             title: '',
             // 默认地址
@@ -29,7 +29,7 @@ export default class DialogForm {
 
             // 保存成功后是否刷新页面
             forceRefresh: false,
-            resetButton: true,
+            disableReset: false,
 
             // 执行保存操作后回调
             saved: nullFun,
@@ -40,38 +40,38 @@ export default class DialogForm {
         }, options);
 
         // 表单
-        self.$form = null;
+        _this.$form = null;
         // 目标按钮
-        self.$target = null;
-        self._dialog = w.layer;
-        self._counter = 1;
-        self._idx = {};
-        self._dialogs = {};
-        self.rendering = 0;
-        self.submitting = 0;
+        _this.$target = null;
+        _this._dialog = w.layer;
+        _this._counter = 1;
+        _this._idx = {};
+        _this._dialogs = {};
+        _this.isLoading = 0;
+        _this.isSubmitting = 0;
 
-        self.init(options)
+        _this.init(options)
     }
 
     init(options) {
-        let self = this,
+        let _this = this,
             defUrl = options.defaultUrl,
             selector = options.buttonSelector;
 
         selector && $(selector).off('click').click(function () {
-            self.$target = $(this);
+            _this.$target = $(this);
 
-            let counter = self.$target.attr('counter'), url;
+            let counter = _this.$target.attr('counter'), url;
 
             if (! counter) {
-                counter = self._counter;
+                counter = _this._counter;
 
-                self.$target.attr('counter', counter);
+                _this.$target.attr('counter', counter);
 
-                self._counter++;
+                _this._counter++;
             }
 
-            url = self.$target.data('url') || defUrl;  // 给弹窗页面链接追加参数
+            url = _this.$target.data('url') || defUrl;  // 给弹窗页面链接追加参数
 
             if (url.indexOf('?') === -1) {
                 url += '?' + options.query + '=1'
@@ -79,28 +79,28 @@ export default class DialogForm {
                 url += '&' + options.query + '=1'
             }
 
-            self._build(url, counter);
+            _this._build(url, counter);
         });
 
         selector || setTimeout(function () {
-            self._build(defUrl, self._counter)
+            _this._build(defUrl, _this._counter)
         }, 400);
     }
 
     // 构建表单
     _build(url, counter) {
-        let self = this,
-            $btn = self.$target;
+        let _this = this,
+            $btn = _this.$target;
 
-        if (! url || self.rendering) {
+        if (! url || _this.isLoading) {
             return;
         }
 
-        if (self._dialogs[counter]) { // 阻止同个类型的弹窗弹出多个
-            self._dialogs[counter].show();
+        if (_this._dialogs[counter]) { // 阻止同个类型的弹窗弹出多个
+            _this._dialogs[counter].show();
 
             try {
-                self._dialog.restore(self._idx[counter]);
+                _this._dialog.restore(_this._idx[counter]);
             } catch (e) {
             }
 
@@ -109,10 +109,10 @@ export default class DialogForm {
 
         // 刷新或跳转页面时移除弹窗
         Dcat.onPjaxComplete(() => {
-            self._destroy(counter);
+            _this._destroy(counter);
         });
 
-        self.rendering = 1;
+        _this.isLoading = 1;
 
         $btn && $btn.buttonLoading();
 
@@ -122,7 +122,7 @@ export default class DialogForm {
         $.ajax({
             url: url,
             success: function (template) {
-                self.rendering = 0;
+                _this.isLoading = 0;
                 Dcat.NP.done();
 
                 if ($btn) {
@@ -133,18 +133,18 @@ export default class DialogForm {
                     }, 50);
                 }
 
-                self._popup(template, counter);
+                _this._popup(template, counter);
             }
         });
     }
 
     // 弹出弹窗
     _popup(template, counter) {
-        let self = this,
-            options = self.options;
+        let _this = this,
+            options = _this.options;
 
         // 加载js代码
-        template = Dcat.assets.resolveHtml(template).render();
+        template = Dcat.assets.executeScripts(template).render();
         
         let btns = [options.lang.submit],
             dialogOpts = {
@@ -160,23 +160,23 @@ export default class DialogForm {
                 content: template,
                 title: options.title,
                 yes: function () {
-                    self.submit()
+                    _this.submit()
                 },
                 cancel: function () {
                     if (options.forceRefresh) { // 是否强制刷新
-                        self._dialogs[counter] = self._idx[counter] = null;
+                        _this._dialogs[counter] = _this._idx[counter] = null;
                     } else {
-                        self._dialogs[counter].hide();
+                        _this._dialogs[counter].hide();
                         return false;
                     }
                 }
             };
 
-        if (options.resetButton) {
+        if (! options.disableReset) {
             btns.push(options.lang.reset);
 
             dialogOpts.btn2 = function () { // 重置按钮
-                self.$form.trigger('reset');
+                _this.$form.trigger('reset');
                 
                 return false;
             };
@@ -184,9 +184,9 @@ export default class DialogForm {
 
         dialogOpts.btn = btns;
 
-        self._idx[counter] = self._dialog.open(dialogOpts);
-        self._dialogs[counter] = w.$('#layui-layer' + self._idx[counter]);
-        self.$form = self._dialogs[counter].find('form').first();
+        _this._idx[counter] = _this._dialog.open(dialogOpts);
+        _this._dialogs[counter] = w.$('#layui-layer' + _this._idx[counter]);
+        _this.$form = _this._dialogs[counter].find('form').first();
     }
 
     // 销毁弹窗
@@ -202,52 +202,51 @@ export default class DialogForm {
 
     // 提交表单
     submit() {
-        let self = this, 
-            options = self.options,
-            counter = self.$target.attr('counter'),
-            $submitBtn = self._dialogs[counter].find('.layui-layer-btn0');
+        let _this = this, 
+            options = _this.options,
+            counter = _this.$target.attr('counter'),
+            $submitBtn = _this._dialogs[counter].find('.layui-layer-btn0');
 
-        if (self.submitting) {
+        if (_this.isSubmitting) {
             return;
         }
 
         Dcat.Form({
-            form: self.$form,
+            form: _this.$form,
             redirect: false,
-            confirm: Dcat.FormConfirm,
             before: function () {
                 // 验证表单
-                self.$form.validator('validate');
+                _this.$form.validator('validate');
 
-                if (self.$form.find('.has-error').length > 0) {
+                if (_this.$form.find('.has-error').length > 0) {
                     return false;
                 }
 
-                self.submitting = 1;
+                _this.isSubmitting = 1;
 
                 $submitBtn.buttonLoading();
             },
-            after: function (status, response) {
+            after: function (success, res) {
                 $submitBtn.buttonLoading(false);
 
-                self.submitting = 0;
+                _this.isSubmitting = 0;
 
-                if (options.saved(status, response) === false) {
+                if (options.saved(success, res) === false) {
                     return false;
                 }
 
-                if (! status) {
-                    return options.error(status, response);
+                if (! success) {
+                    return options.error(success, res);
                 }
-                if (response.status) {
-                    let r = options.success(status, response);
+                if (res.status) {
+                    let r = options.success(success, res);
 
-                    self._destroy(counter);
+                    _this._destroy(counter);
 
                     return r;
                 }
 
-                return options.error(status, response);
+                return options.error(success, res);
             }
         });
 

@@ -1,4 +1,4 @@
-<script>Dcat.wait();</script>
+<script>Dcat.pjaxResponded();</script>
 
 <style>
     .form-content .row {
@@ -20,7 +20,7 @@
 @yield('content')
 
 {!! Dcat\Admin\Admin::asset()->scriptToHtml() !!}
-<div class="extra-html">{!! Dcat\Admin\Admin::html() !!}</div>
+{!! Dcat\Admin\Admin::html() !!}
 
 {{--select2下拉选框z-index必须大于弹窗的值--}}
 <style>.select2-dropdown {z-index: 99999999999}</style>

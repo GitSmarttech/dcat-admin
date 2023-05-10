@@ -4,9 +4,9 @@ namespace Dcat\Admin\Layout;
 
 use Closure;
 use Dcat\Admin\Admin;
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Traits\HasBuilderEvents;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use Illuminate\Support\ViewErrorBag;
 
@@ -120,20 +120,6 @@ class Content implements Renderable
     }
 
     /**
-     * 设置翻译文件路径.
-     *
-     * @param string|null $translation
-     *
-     * @return $this
-     */
-    public function translation(?string $translation)
-    {
-        Admin::translation($translation);
-
-        return $this;
-    }
-
-    /**
      * Build full page.
      *
      * @return $this
@@ -166,6 +152,14 @@ class Content implements Renderable
     }
 
     /**
+     * @deprecated
+     */
+    public function perfectScrollbar()
+    {
+        return $this;
+    }
+
+    /**
      * @param array $breadcrumb
      *
      * @throws \Exception
@@ -175,21 +169,21 @@ class Content implements Renderable
     protected function formatBreadcrumb(array &$breadcrumb)
     {
         if (! $breadcrumb) {
-            throw new RuntimeException('Breadcrumb format error!');
+            throw new \Exception('Breadcrumb format error!');
         }
 
         $notArray = false;
         foreach ($breadcrumb as &$item) {
             $isArray = is_array($item);
             if ($isArray && ! isset($item['text'])) {
-                throw new RuntimeException('Breadcrumb format error!');
+                throw new \Exception('Breadcrumb format error!');
             }
             if (! $isArray && $item) {
                 $notArray = true;
             }
         }
         if (! $breadcrumb) {
-            throw new RuntimeException('Breadcrumb format error!');
+            throw new \Exception('Breadcrumb format error!');
         }
         if ($notArray) {
             $breadcrumb = [
@@ -274,35 +268,13 @@ class Content implements Renderable
      */
     public function build()
     {
-        try {
-            $html = '';
+        $html = '';
 
-            foreach ($this->rows as $row) {
-                $html .= $row->render();
-            }
-
-            return $html;
-        } catch (\Throwable $e) {
-            return $this->handleException($e);
-        }
-    }
-
-    /**
-     * @param \Throwable $e
-     *
-     * @return mixed|string
-     */
-    protected function handleException(\Throwable $e)
-    {
-        $response = Admin::handleException($e);
-
-        if (is_string($response) || $response instanceof Renderable) {
-            $row = new Row($response);
-
-            return $row->render();
+        foreach ($this->rows as $row) {
+            $html .= $row->render();
         }
 
-        return $response;
+        return $html;
     }
 
     /**
@@ -433,7 +405,7 @@ class Content implements Renderable
             'description'     => $this->description,
             'breadcrumb'      => $this->breadcrumb,
             'configData'      => $this->applyClasses(),
-            'pjaxContainerId' => Admin::getPjaxContainerId(),
+            'pjaxContainerId' => Admin::$pjaxContainerId,
         ], $this->variables);
     }
 
@@ -450,8 +422,7 @@ class Content implements Renderable
             'navbar_color'      => '',
             'navbar_class'      => 'sticky',
             'footer_type'       => '',
-            'body_class'        => [],
-            'horizontal_menu'   => false,
+            'body_class'        => '',
         ];
 
         $data = array_merge(
@@ -459,15 +430,19 @@ class Content implements Renderable
             $this->config
         );
 
+        // 1.0 版本兼容 sidebar_dark 参数
+        if (empty($data['sidebar_style']) && ! empty($data['sidebar_dark'])) {
+            $data['sidebar_style'] = 'sidebar-dark-white';
+        }
+
         $allOptions = [
             'theme'             => '',
             'footer_type'       => '',
-            'body_class'        => [],
+            'body_class'        => '',
             'sidebar_style'     => ['light' => 'sidebar-light-primary', 'primary' => 'sidebar-primary', 'dark' => 'sidebar-dark-white'],
             'sidebar_collapsed' => [],
             'navbar_color'      => [],
             'navbar_class'      => ['floating' => 'floating-nav', 'sticky' => 'fixed-top', 'hidden' => 'd-none'],
-            'horizontal_menu'   => [],
         ];
 
         $maps = [
@@ -497,16 +472,8 @@ class Content implements Renderable
             }
         }
 
-        if (! is_array($data['body_class'])) {
-            $data['body_class'] = explode(' ', (string) $data['body_class']);
-        }
-
-        if ($data['body_class'] && in_array('dark-mode', $data['body_class'], true)) {
+        if ($data['body_class'] && Str::contains($data['body_class'], 'dark-mode')) {
             $data['sidebar_style'] = 'sidebar-dark-white';
-        }
-
-        if ($data['horizontal_menu']) {
-            $data['body_class'][] = 'horizontal-menu';
         }
 
         return [
@@ -515,9 +482,8 @@ class Content implements Renderable
             'navbar_color'      => $data['navbar_color'],
             'navbar_class'      => $allOptions['navbar_class'][$data['navbar_class']],
             'sidebar_class'     => $data['sidebar_collapsed'] ? 'sidebar-collapse' : '',
-            'body_class'        => implode(' ', $data['body_class']),
+            'body_class'        => $data['body_class'],
             'sidebar_style'     => $data['sidebar_style'],
-            'horizontal_menu'   => $data['horizontal_menu'],
         ];
     }
 
@@ -534,10 +500,6 @@ class Content implements Renderable
         $this->variables['content'] = $this->build();
 
         $this->callComposed();
-
-        if (Admin::shouldPrevent()) {
-            return Admin::renderContents();
-        }
 
         return view($this->view, $this->variables())->render();
     }

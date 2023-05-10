@@ -3,18 +3,12 @@
 namespace Dcat\Admin\Repositories;
 
 use Dcat\Admin\Contracts\TreeRepository;
-use Dcat\Admin\Exception\AdminException;
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Form;
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
-use Dcat\Laravel\Database\SoftDeletes as DcatSoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Database\Eloquent\Relations;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -76,16 +70,13 @@ class EloquentRepository extends Repository implements TreeRepository
             $this->eloquentClass = get_class($this->model);
             $this->queryBuilder = $modelOrRelations;
         } else {
-            $this->setRelations($modelOrRelations);
+            $this->with($modelOrRelations);
         }
 
-        $this->setKeyName($this->model()->getKeyName());
-
-        $traits = class_uses($this->model());
+        $this->setKeyName($this->eloquent()->getKeyName());
 
         $this->setIsSoftDeletes(
-            in_array(SoftDeletes::class, $traits, true)
-            || in_array(DcatSoftDeletes::class, $traits, true)
+            in_array(SoftDeletes::class, class_uses($this->eloquent()))
         );
     }
 
@@ -94,7 +85,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function getCreatedAtColumn()
     {
-        return $this->model()->getCreatedAtColumn();
+        return $this->eloquent()->getCreatedAtColumn();
     }
 
     /**
@@ -102,7 +93,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function getUpdatedAtColumn()
     {
-        return $this->model()->getUpdatedAtColumn();
+        return $this->eloquent()->getUpdatedAtColumn();
     }
 
     /**
@@ -142,7 +133,7 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @return $this
      */
-    public function setRelations($relations)
+    public function with($relations)
     {
         $this->relations = (array) $relations;
 
@@ -168,9 +159,9 @@ class EloquentRepository extends Repository implements TreeRepository
         }
 
         $model->getQueries()->unique()->each(function ($value) use (&$query) {
-            if ($value['method'] === 'paginate' || $value['method'] === 'simplePaginate') {
+            if ($value['method'] == 'paginate') {
                 $value['arguments'][1] = $this->getGridColumns();
-            } elseif ($value['method'] === 'get') {
+            } elseif ($value['method'] == 'get') {
                 $value['arguments'] = [$this->getGridColumns()];
             }
 
@@ -189,176 +180,46 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     protected function setSort(Grid\Model $model)
     {
-        [$column, $type, $cast] = $model->getSort();
+        [$column, $type] = $model->getSort();
 
         if (empty($column) || empty($type)) {
-            $orders = $model->findQueryByMethod('orderBy')->merge($model->findQueryByMethod('orderByDesc'));
+            return;
+        }
 
+        if (Str::contains($column, '.')) {
+            $this->setRelationSort($model, $column, $type);
+        } else {
             $model->resetOrderBy();
 
-            $orders->each(function ($orderBy) use ($model) {
-                $column = $orderBy['arguments'][0];
-                $type = $orderBy['method'] === 'orderByDesc' ? 'desc' : ($orderBy['arguments'][1] ?? 'asc');
-                $cast = null;
-
-                $this->addOrderBy($model, $column, $type, $cast);
-            });
-
-            return;
-        }
-
-        $model->resetOrderBy();
-
-        $this->addOrderBy($model, $column, $type, $cast);
-    }
-
-    /**
-     * @param Grid\Model $model
-     * @param string $column
-     * @param string $type
-     * @param string $cast
-     *
-     * @throws \Exception
-     */
-    protected function addOrderBy(Grid\Model $model, $column, $type, $cast)
-    {
-        $explodedCols = explode('.', $column);
-        $isRelation = empty($explodedCols[1]) ? false : method_exists($this->model(), $explodedCols[0]);
-
-        if (count($explodedCols) > 1 && $isRelation) {
-            $this->setRelationSort($model, $column, $type, $cast);
-
-            return;
-        }
-
-        $this->setOrderBy(
-            $model,
-            str_replace('.', '->', $column),
-            $type,
-            $cast);
-    }
-
-    /**
-     * @param Grid\Model $model
-     * @param $column
-     * @param $type
-     *
-     * @param $cast
-     */
-    protected function setOrderBy(Grid\Model $model, $column, $type, $cast)
-    {
-        $isJsonColumn = Str::contains($column, '->');
-
-        if ($isJsonColumn) {
-            $explodedCols = explode('->', $column);
-            // json字段排序
-            $col = $this->wrapMySqlColumn(array_shift($explodedCols));
-            $parts = implode('.', $explodedCols);
-            $column = "JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.{$parts}'))";
-        }
-
-        if (! empty($cast)) {
-            $column = $this->wrapMySqlColumn($column);
-
-            $model->addQuery(
-                'orderByRaw',
-                ["CAST({$column} AS {$cast}) {$type}"]
-            );
-
-            return;
-        }
-
-        if ($isJsonColumn) {
-            $model->addQuery('orderByRaw', ["{$column} {$type}"]);
-        } else {
             $model->addQuery('orderBy', [$column, $type]);
         }
-    }
-
-    /**
-     * @param string $column
-     *
-     * @return string
-     */
-    protected function wrapMySqlColumn($column)
-    {
-        if (Str::contains($column, '`')) {
-            return $column;
-        }
-
-        $columns = explode('.', $column);
-
-        foreach ($columns as &$column) {
-            if (! Str::contains($column, '`')) {
-                $column = "`{$column}`";
-            }
-        }
-
-        return implode('.', $columns);
     }
 
     /**
      * 设置关联数据排序.
      *
      * @param Grid\Model $model
-     * @param string $column
-     * @param string $type
-     * @param string $cast
+     * @param string     $column
+     * @param string     $type
      *
-     * @throws \Exception
+     * @return void
      */
-    protected function setRelationSort(Grid\Model $model, $column, $type, $cast)
+    protected function setRelationSort(Grid\Model $model, $column, $type)
     {
-        [$relationName, $relationColumn] = explode('.', $column, 2);
+        [$relationName, $relationColumn] = explode('.', $column);
 
-        $relation = $this->model()->$relationName();
+        if ($model->getQueries()->contains(function ($query) use ($relationName) {
+            return $query['method'] == 'with' && in_array($relationName, $query['arguments']);
+        })) {
+            $model->addQuery('select', [$this->getGridColumns()]);
 
-        $model->addQuery('select', [$this->model()->getTable().'.*']);
+            $model->resetOrderBy();
 
-        $model->addQuery('join', $this->joinParameters($relation));
-
-        $this->setOrderBy(
-            $model,
-            $relation->getRelated()->getTable().'.'.str_replace('.', '->', $relationColumn),
-            $type,
-            $cast
-        );
-    }
-
-    /**
-     * 关联模型 join 连接查询.
-     *
-     * @param Relation $relation
-     *
-     * @throws \Exception
-     *
-     * @return array
-     */
-    protected function joinParameters(Relation $relation)
-    {
-        $relatedTable = $relation->getRelated()->getTable();
-
-        if ($relation instanceof BelongsTo) {
-            $foreignKeyMethod = version_compare(app()->version(), '5.8.0', '<') ? 'getForeignKey' : 'getForeignKeyName';
-
-            return [
-                $relatedTable,
-                $relation->{$foreignKeyMethod}(),
-                '=',
-                $relatedTable.'.'.$relation->getRelated()->getKeyName(),
-            ];
+            $model->addQuery('orderBy', [
+                $relationColumn,
+                $type,
+            ]);
         }
-
-        if ($relation instanceof HasOne) {
-            return [
-                $relatedTable,
-                $relation->getQualifiedParentKeyName(),
-                '=',
-                $relation->getQualifiedForeignKeyName(),
-            ];
-        }
-
-        throw new AdminException('Related sortable only support `HasOne` and `BelongsTo` relation.');
     }
 
     /**
@@ -370,16 +231,14 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     protected function setPaginate(Grid\Model $model)
     {
-        $paginateMethod = $model->getPaginateMethod();
+        $paginate = $model->findQueryByMethod('paginate');
 
-        $paginate = $model->findQueryByMethod($paginateMethod)->first();
-
-        $model->rejectQuery(['paginate', 'simplePaginate']);
+        $model->rejectQuery(['paginate']);
 
         if (! $model->allowPagination()) {
             $model->addQuery('get', [$this->getGridColumns()]);
         } else {
-            $model->addQuery($paginateMethod, $this->resolvePerPage($model, $paginate));
+            $model->addQuery('paginate', $this->resolvePerPage($model, $paginate));
         }
     }
 
@@ -414,9 +273,9 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @param Form $form
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function edit(Form $form)
+    public function edit(Form $form): array
     {
         $query = $this->newQuery();
 
@@ -428,7 +287,7 @@ class EloquentRepository extends Repository implements TreeRepository
             ->with($this->getRelations())
             ->findOrFail($form->getKey(), $this->getFormColumns());
 
-        return $this->model;
+        return $this->model->toArray();
     }
 
     /**
@@ -436,9 +295,9 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @param Show $show
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function detail(Show $show)
+    public function detail(Show $show): array
     {
         $query = $this->newQuery();
 
@@ -450,7 +309,7 @@ class EloquentRepository extends Repository implements TreeRepository
             ->with($this->getRelations())
             ->findOrFail($show->getKey(), $this->getDetailColumns());
 
-        return $this->model;
+        return $this->model->toArray();
     }
 
     /**
@@ -465,7 +324,7 @@ class EloquentRepository extends Repository implements TreeRepository
         $result = null;
 
         DB::transaction(function () use ($form, &$result) {
-            $model = $this->model();
+            $model = $this->eloquent();
 
             $updates = $form->updates();
 
@@ -484,7 +343,7 @@ class EloquentRepository extends Repository implements TreeRepository
             $this->updateRelation($form, $model, $relations, $relationKeyMap);
         });
 
-        return $this->model()->getKey();
+        return $this->eloquent()->getKey();
     }
 
     /**
@@ -492,9 +351,9 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @param Form $form
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function updating(Form $form)
+    public function getDataWhenUpdating(Form $form): array
     {
         return $this->edit($form);
     }
@@ -509,7 +368,7 @@ class EloquentRepository extends Repository implements TreeRepository
     public function update(Form $form)
     {
         /* @var EloquentModel $builder */
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (! $model->getKey()) {
             $model->exists = true;
@@ -548,10 +407,10 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function moveOrderUp()
     {
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (! $model instanceof Sortable) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 sprintf(
                     'The model "%s" must be a type of %s.',
                     get_class($model),
@@ -570,10 +429,10 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function moveOrderDown()
     {
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (! $model instanceof Sortable) {
-            throw new RuntimeException(
+            throw new \RuntimeException(
                 sprintf(
                     'The model "%s" must be a type of %s.',
                     get_class($model),
@@ -593,7 +452,7 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @return bool
      */
-    public function delete(Form $form, array $originalData)
+    public function destroy(Form $form, array $originalData)
     {
         $models = $this->collection->keyBy($this->getKeyName());
 
@@ -628,7 +487,7 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @return array
      */
-    public function deleting(Form $form)
+    public function getDataWhenDeleting(Form $form): array
     {
         $query = $this->newQuery();
 
@@ -655,7 +514,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function getParentColumn()
     {
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (method_exists($model, 'getParentColumn')) {
             return $model->getParentColumn();
@@ -669,7 +528,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function getTitleColumn()
     {
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (method_exists($model, 'getTitleColumn')) {
             return $model->getTitleColumn();
@@ -683,7 +542,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function getOrderColumn()
     {
-        $model = $this->model();
+        $model = $this->eloquent();
 
         if (method_exists($model, 'getOrderColumn')) {
             return $model->getOrderColumn();
@@ -698,7 +557,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function saveOrder($tree = [], $parentId = 0)
     {
-        $this->model()->saveOrder($tree, $parentId);
+        $this->eloquent()->saveOrder($tree, $parentId);
     }
 
     /**
@@ -710,7 +569,7 @@ class EloquentRepository extends Repository implements TreeRepository
      */
     public function withQuery($queryCallback)
     {
-        $this->model()->withQuery($queryCallback);
+        $this->eloquent()->withQuery($queryCallback);
 
         return $this;
     }
@@ -728,7 +587,7 @@ class EloquentRepository extends Repository implements TreeRepository
             });
         }
 
-        return $this->model()->toTree();
+        return $this->eloquent()->toTree();
     }
 
     /**
@@ -740,7 +599,7 @@ class EloquentRepository extends Repository implements TreeRepository
             return clone $this->queryBuilder;
         }
 
-        return $this->model()->newQuery();
+        return $this->eloquent()->newQuery();
     }
 
     /**
@@ -748,9 +607,9 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @return EloquentModel
      */
-    public function model()
+    public function eloquent()
     {
-        return $this->model ?: ($this->model = $this->createModel());
+        return $this->model ?: ($this->model = $this->createEloquent());
     }
 
     /**
@@ -758,7 +617,7 @@ class EloquentRepository extends Repository implements TreeRepository
      *
      * @return EloquentModel
      */
-    public function createModel(array $data = [])
+    public function createEloquent(array $data = [])
     {
         $model = new $this->eloquentClass();
 
@@ -770,21 +629,11 @@ class EloquentRepository extends Repository implements TreeRepository
     }
 
     /**
-     * @param array $relations
-     *
-     * @return $this
-     */
-    public static function with($relations = [])
-    {
-        return (new static())->setRelations($relations);
-    }
-
-    /**
      * 获取模型的所有关联关系.
      *
      * @return array
      */
-    public function getRelations()
+    protected function getRelations()
     {
         return $this->relations;
     }

@@ -16,13 +16,7 @@ class RowSelector
 
     protected $rowClickable = false;
 
-    protected $idColumn;
-
     protected $titleColumn;
-
-    protected $checked = [];
-
-    protected $disabled = [];
 
     public function __construct(Grid $grid)
     {
@@ -50,27 +44,6 @@ class RowSelector
         return $this;
     }
 
-    public function check($data)
-    {
-        $this->checked = $data;
-
-        return $this;
-    }
-
-    public function disable($data)
-    {
-        $this->disabled = $data;
-
-        return $this;
-    }
-
-    public function idColumn(string $value)
-    {
-        $this->idColumn = $value;
-
-        return $this;
-    }
-
     public function titleColumn(string $value)
     {
         $this->titleColumn = $value;
@@ -90,22 +63,18 @@ HTML;
 
     public function renderColumn($row, $id)
     {
-        $this->addScript();
-        $title = $this->getTitle($row, $id);
-        $title = e(is_array($title) ? json_encode($title) : $title);
-        $id = $this->idColumn ? Arr::get($row->toArray(), $this->idColumn) : $id;
-        $checked = $this->shouldChecked($row) ? 'checked="true"' : '';
-        $disabled = $this->shouldDisable($row) ? 'disabled' : '';
+        $this->setupScript();
+        $title = e($this->getTitle($row, $id));
 
         return <<<EOT
 <div class="vs-checkbox-con vs-checkbox-{$this->style} checkbox-grid checkbox-grid-column">
-    <input type="checkbox" class="{$this->grid->getRowName()}-checkbox" data-id="{$id}" {$checked} {$disabled} data-label="{$title}">
+    <input type="checkbox" class="{$this->grid->getRowName()}-checkbox" data-id="{$id}" data-label="{$title}">
     <span class="vs-checkbox"><span class="vs-checkbox--check"><i class="vs-icon feather icon-check"></i></span></span>
 </div>        
 EOT;
     }
 
-    protected function addScript()
+    protected function setupScript()
     {
         $clickable = $this->rowClickable ? 'true' : 'false';
         $background = $this->background ?: Admin::color()->dark20();
@@ -121,33 +90,6 @@ var selector = Dcat.RowSelector({
 Dcat.grid.addSelector(selector, '{$this->grid->getName()}');
 JS
         );
-    }
-
-    protected function shouldChecked($row)
-    {
-        return $this->isSelectedRow($row, $this->checked);
-    }
-
-    protected function shouldDisable($row)
-    {
-        return $this->isSelectedRow($row, $this->disabled);
-    }
-
-    protected function isSelectedRow($row, $value)
-    {
-        if ($value instanceof \Closure) {
-            return $value->call($row, $row);
-        }
-
-        if (is_array($value)) {
-            foreach ($value as $v) {
-                if (((int) $v) === $row->_index) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     protected function getTitle($row, $id)

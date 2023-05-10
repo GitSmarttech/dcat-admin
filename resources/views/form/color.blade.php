@@ -1,9 +1,6 @@
-<style>
-    .popover{z-index:29891015}
-</style>
+<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
 
-<div class="{{$viewClass['form-group']}}">
-    <div  class="{{$viewClass['label']}} control-label">
+    <div for="{{ $id }}" class="{{$viewClass['label']}} control-label">
         <span>{!! $label !!}</span>
     </div>
 
@@ -22,11 +19,6 @@
         </div>
 
         @include('admin::form.help-block')
+
     </div>
 </div>
-
-<script require="@color" init="{!! $selector !!}">
-    $this.colorpicker({!! admin_javascript_json($options) !!}).on('colorpickerChange', function(event) {
-        $(this).parents('.input-group').find('.input-group-prepend i').css('background-color', event.color.toString());
-    });
-</script>

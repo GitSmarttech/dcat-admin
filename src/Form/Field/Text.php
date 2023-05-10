@@ -4,7 +4,6 @@ namespace Dcat\Admin\Form\Field;
 
 use Dcat\Admin\Admin;
 use Dcat\Admin\Form\Field;
-use Illuminate\Support\Str;
 
 class Text extends Field
 {
@@ -29,8 +28,9 @@ class Text extends Field
         $this->initPlainInput();
 
         $this->defaultAttribute('type', 'text')
+            ->defaultAttribute('id', $this->id)
             ->defaultAttribute('name', $this->getElementName())
-            ->defaultAttribute('value', $this->value())
+            ->defaultAttribute('value', old($this->column, $this->value()))
             ->defaultAttribute('class', 'form-control '.$this->getElementClassString())
             ->defaultAttribute('placeholder', $this->placeholder());
 
@@ -76,7 +76,7 @@ class Text extends Field
         }
 
         $attributes = [
-            'data-match'       => $field->getElementClassSelector(),
+            'data-match'       => '#'.$field->getElementId(),
             'data-match-error' => str_replace(
                 [':attribute', ':other'],
                 [$field->label(), $this->label()],
@@ -146,13 +146,29 @@ JS
     {
         Admin::js('@jquery.inputmask');
 
-        $options = admin_javascript_json($options);
+        $options = $this->jsonEncodeOptions($options);
 
-        $this->script = "Dcat.init('{$this->getElementClassSelector()}', function (self) {
-            self.inputmask($options);
-        });";
+        $this->script = "$('{$this->getElementClassSelector()}').inputmask($options);";
 
         return $this;
+    }
+
+    /**
+     * Encode options to Json.
+     *
+     * @param array $options
+     *
+     * @return $json
+     */
+    protected function jsonEncodeOptions($options)
+    {
+        $data = $this->formatOptions($options);
+
+        $json = json_encode($data['options']);
+
+        $json = str_replace($data['toReplace'], $data['original'], $json);
+
+        return $json;
     }
 
     /**
@@ -190,11 +206,9 @@ JS
      */
     public function datalist($entries = [])
     {
-        $id = Str::random(8);
+        $this->defaultAttribute('list', "list-{$this->id}");
 
-        $this->defaultAttribute('list', "list-{$id}");
-
-        $datalist = "<datalist id=\"list-{$id}\">";
+        $datalist = "<datalist id=\"list-{$this->id}\">";
         foreach ($entries as $k => $v) {
             $value = is_string($k) ? "value=\"{$k}\"" : '';
 
@@ -202,7 +216,7 @@ JS
         }
         $datalist .= '</datalist>';
 
-        Admin::script("$('#list-{$id}').parent().hide()");
+        Admin::script("$('#list-{$this->id}').parent().hide()");
 
         return $this->append($datalist);
     }

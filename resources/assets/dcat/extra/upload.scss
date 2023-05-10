@@ -42,6 +42,7 @@
   user-select: none;
   background-image: none;
   color: #fff;
+  background-color: lighten($primary, 2%)
 }
 
 .webuploader-pick-hover {
@@ -88,6 +89,7 @@
 }
 
 .web-uploader .placeholder .webuploader-pick {
+  background: lighten($primary, 1%);
   border-radius: 3px;
   line-height: 34px;
   padding: 0 25px;
@@ -113,6 +115,7 @@
 }
 
 .web-uploader .placeholder .flashTip a {
+  color: lighten($primary, 1%);
   text-decoration: none
 }
 
@@ -164,20 +167,20 @@
 
 .web-uploader.file .filelist li {
   width: 100%;
-  height: 38px;
+  height: 40px;
   background: $white;
   box-shadow: $shadow-100;
   margin: 0 8px 10px 0;
-  border-radius: $card-border-radius;
+  border-radius: 5px;
   border: 0;
-  padding: 0;
+  padding: 0
 }
 
 .web-uploader.file .filelist li .file-action {
   float: right;
-  margin: 12px 10px 0;
+  margin: 16px 10px 0;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 15px;
   position: absolute;
   right: 0;
 }
@@ -204,14 +207,15 @@
 
 .web-uploader.file .filelist li p.title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 15px;
   vertical-align: middle;
-  height: 38px;
-  line-height: 30px;
+  height: 42px;
+  line-height: 35px;
   padding-left: 8px;
   float: left;
   text-align: left;
-  max-width: 100%
+  //color: #333;
+  width: 100%
 }
 
 .web-uploader .filelist .file-type {
@@ -238,6 +242,8 @@
   overflow: hidden;
   width: 0;
   height: 100%;
+  background: lighten($primary, 2%);
+  //background: lighten($primary, 2%) url(./progress.png) repeat-x;
   -webit-transition: width 200ms linear;
   -moz-transition: width 200ms linear;
   -o-transition: width 200ms linear;
@@ -425,6 +431,7 @@
   height: 100%;
   left: 0;
   top: 0;
+  background: lighten($primary, 2%);
   position: absolute
 }
 

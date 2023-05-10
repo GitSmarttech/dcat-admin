@@ -17,7 +17,7 @@ class Paginator implements Renderable
     /**
      * @var \Illuminate\Pagination\LengthAwarePaginator
      */
-    public $paginator = null;
+    protected $paginator = null;
 
     /**
      * Create a new Paginator instance.
@@ -79,7 +79,7 @@ class Paginator implements Renderable
         $parameters = [
             'first' => $this->paginator->firstItem(),
             'last'  => $this->paginator->lastItem(),
-            'total' => method_exists($this->paginator, 'total') ? $this->paginator->total() : '...',
+            'total' => $this->paginator->total(),
         ];
 
         $parameters = collect($parameters)->flatMap(function ($parameter, $key) {

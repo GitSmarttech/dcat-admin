@@ -2,6 +2,7 @@
 
 namespace Tests\Browser\Pages;
 
+use Dcat\Admin\Form\Field;
 use Laravel\Dusk\Browser;
 use Tests\Browser\Components\Form\Field\HasMany;
 
@@ -80,7 +81,11 @@ class PainterCreatePage extends Page
 
                             $browser->withLastFormGroup(function (Browser $browser) use ($input) {
                                 foreach ($input as $k => $v) {
-                                    $browser->fillFieldValue($k, $v);
+                                    $browser->script(
+                                        <<<JS
+                                    $('{$browser->resolver->format('.'.Field::FIELD_CLASS_PREFIX.$k)}').val('$v');
+JS
+                                    );
                                 }
                             });
                         }
@@ -100,7 +105,6 @@ class PainterCreatePage extends Page
     public function submit(Browser $browser)
     {
         return $browser->with('@form', function (Browser $browser) {
-            $browser->scrollToTop();
             $browser->press(__('admin.submit'));
             $browser->waitForTextInBody(__('admin.save_succeeded'), 2);
             $browser->waitForLocation(admin_base_path('tests/painters'), 1);

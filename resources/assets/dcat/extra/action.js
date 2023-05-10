@@ -66,7 +66,44 @@
                     return;
                 }
 
-                Dcat.handleJsonResponse(response, {html: options.html, target: target});
+                if (typeof response !== 'object') {
+                    return Dcat.error({type: 'error', title: 'Oops!'});
+                }
+
+                var then = function (then) {
+                    switch (then.action) {
+                        case 'refresh':
+                            Dcat.reload();
+                            break;
+                        case 'download':
+                            window.open(then.value, '_blank');
+                            break;
+                        case 'redirect':
+                            Dcat.reload(then.value);
+                            break;
+                        case 'location':
+                            window.location = then.value;
+                            break;
+                        case 'script':
+                            (function () {
+                                eval(then.value);
+                            })();
+                            break;
+                    }
+                };
+
+                if (typeof response.html === 'string' && response.html) {
+                    // 处理api返回的HTML代码
+                    options.html(target, response.html, response);
+                }
+
+                if (typeof response.data.message === 'string' && response.data.type) {
+                    Dcat[response.data.type](response.data.message);
+                }
+
+                if (response.data.then) {
+                    then(response.data.then);
+                }
             };
         }
 
@@ -83,7 +120,7 @@
                 if (request && typeof request.responseJSON === 'object') {
                     Dcat.error(request.responseJSON.message)
                 }
-                console.error(result);
+                console.error(request);
             }
         }
 
@@ -94,7 +131,6 @@
                 Object.assign(data, {
                     _action: options.calledClass,
                     _key: options.key,
-                    _token: Dcat.token,
                 });
 
                 Dcat.NP.start();

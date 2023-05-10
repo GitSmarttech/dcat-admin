@@ -4,19 +4,29 @@ namespace Dcat\Admin\Form\Concerns;
 
 use Closure;
 use Dcat\Admin\Contracts\UploadField as UploadFieldInterface;
-use Dcat\Admin\Form\Events;
-use Dcat\Admin\Http\JsonResponse;
-use Illuminate\Support\Facades\Event;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 trait HasEvents
 {
-    public $eventResponse;
+    /**
+     * @var array
+     */
+    protected $__hooks = [
+        'creating'  => [],
+        'editing'   => [],
+        'submitted' => [],
+        'saving'    => [],
+        'saved'     => [],
+        'deleting'  => [],
+        'deleted'   => [],
+        'uploading' => [],
+        'uploaded'  => [],
+    ];
 
     /**
-     * 监听创建页面访问事件.
+     * Set after getting creating model callback.
      *
      * @param Closure $callback
      *
@@ -24,13 +34,13 @@ trait HasEvents
      */
     public function creating(Closure $callback)
     {
-        Event::listen(Events\Creating::class, $this->makeListener($callback));
+        $this->__hooks['creating'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 监听编辑页面访问时间.
+     * Set after getting editing model callback.
      *
      * @param Closure $callback
      *
@@ -38,13 +48,13 @@ trait HasEvents
      */
     public function editing(Closure $callback)
     {
-        Event::listen(Events\Editing::class, $this->makeListener($callback));
+        $this->__hooks['editing'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 监听提交事件.
+     * Set submitted callback.
      *
      * @param Closure $callback
      *
@@ -52,13 +62,13 @@ trait HasEvents
      */
     public function submitted(Closure $callback)
     {
-        Event::listen(Events\Submitted::class, $this->makeListener($callback));
+        $this->__hooks['submitted'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 保存.
+     * Set saving callback.
      *
      * @param Closure $callback
      *
@@ -66,13 +76,13 @@ trait HasEvents
      */
     public function saving(Closure $callback)
     {
-        Event::listen(Events\Saving::class, $this->makeListener($callback));
+        $this->__hooks['saving'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 保存完成.
+     * Set saved callback.
      *
      * @param Closure $callback
      *
@@ -80,163 +90,101 @@ trait HasEvents
      */
     public function saved(Closure $callback)
     {
-        Event::listen(Events\Saved::class, $this->makeListener($callback));
+        $this->__hooks['saved'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 删除.
-     *
      * @param Closure $callback
      *
      * @return $this
      */
     public function deleting(Closure $callback)
     {
-        Event::listen(Events\Deleting::class, $this->makeListener($callback));
+        $this->__hooks['deleting'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 删除完成.
-     *
      * @param Closure $callback
      *
      * @return $this
      */
     public function deleted(Closure $callback)
     {
-        Event::listen(Events\Deleted::class, $this->makeListener($callback));
+        $this->__hooks['deleted'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 文件上传.
-     *
      * @param \Closure $callback
      *
      * @return $this
      */
     public function uploading(Closure $callback)
     {
-        Event::listen(Events\Uploading::class, $this->makeListener($callback));
+        $this->__hooks['uploading'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 上传完成.
-     *
      * @param \Closure $callback
      *
      * @return $this
      */
     public function uploaded(Closure $callback)
     {
-        Event::listen(Events\Uploaded::class, $this->makeListener($callback));
+        $this->__hooks['uploaded'][] = $callback;
 
         return $this;
     }
 
     /**
-     * 删除文件.
-     *
-     * @param \Closure $callback
-     *
-     * @return $this
-     */
-    public function fileDeleting(Closure $callback)
-    {
-        Event::listen(Events\FileDeleting::class, $this->makeListener($callback));
-
-        return $this;
-    }
-
-    /**
-     * 删除文件完成.
-     *
-     * @param \Closure $callback
-     *
-     * @return $this
-     */
-    public function fileDeleted(Closure $callback)
-    {
-        Event::listen(Events\FileDeleted::class, $this->makeListener($callback));
-
-        return $this;
-    }
-
-    /**
-     * @param \Closure $callback
-     *
-     * @return \Closure
-     */
-    protected function makeListener(Closure $callback)
-    {
-        return function (Events\Event $event) use ($callback) {
-            if ($event->form !== $this) {
-                return;
-            }
-
-            if ($model = $event->form->model()) {
-                $callback = $callback->bindTo($model);
-            }
-
-            $ret = $callback($this, ...$event->payload);
-
-            if ($ret instanceof Response || $ret instanceof JsonResponse) {
-                $event->form->eventResponse = $ret;
-
-                return false;
-            }
-        };
-    }
-
-    /**
-     * 触发创建页访问事件.
+     * Call creating callbacks.
      *
      * @return mixed
      */
     protected function callCreating()
     {
-        return $this->fire(Events\Creating::class);
+        return $this->callListeners('creating');
     }
 
     /**
-     * 触发编辑页访问事件.
+     * Call editing callbacks.
      *
      * @return mixed
      */
     protected function callEditing()
     {
-        return $this->fire(Events\Editing::class);
+        return $this->callListeners('editing');
     }
 
     /**
-     * 触发表单提交事件.
+     * Call submitted callback.
      *
      * @return mixed
      */
     protected function callSubmitted()
     {
-        return $this->fire(Events\Submitted::class);
+        return $this->callListeners('submitted');
     }
 
     /**
-     * 触发表单保存事件.
+     * Call saving callback.
      *
      * @return mixed
      */
     protected function callSaving()
     {
-        return $this->fire(Events\Saving::class);
+        return $this->callListeners('saving');
     }
 
     /**
-     * 触发表单保存完成事件.
+     * Callback after saving a Model.
      *
      * @param mixed $result
      *
@@ -244,34 +192,28 @@ trait HasEvents
      */
     protected function callSaved($result)
     {
-        return $this->fire(Events\Saved::class, [$result]);
+        return $this->callListeners('saved', [$result]);
     }
 
     /**
-     * 触发数据删除事件.
-     *
      * @return mixed|null
      */
     protected function callDeleting()
     {
-        return $this->fire(Events\Deleting::class);
+        return $this->callListeners('deleting');
     }
 
     /**
-     * 触发数据删除完成事件.
-     *
      * @param mixed $result
      *
      * @return mixed|null
      */
     protected function callDeleted($result)
     {
-        return $this->fire(Events\Deleted::class, [$result]);
+        return $this->callListeners('deleted', [$result]);
     }
 
     /**
-     * 触发文件上传事件.
-     *
      * @param UploadFieldInterface|\Dcat\Admin\Form\Field $field
      * @param UploadedFile                                $file
      *
@@ -279,12 +221,10 @@ trait HasEvents
      */
     protected function callUploading($field, $file)
     {
-        return $this->fire(Events\Uploading::class, [$field, $file]);
+        return $this->callListeners('uploading', [$field, $file]);
     }
 
     /**
-     * 触发文件上传完成事件.
-     *
      * @param UploadFieldInterface|\Dcat\Admin\Form\Field $field
      * @param UploadedFile                                $file
      * @param Response                                    $response
@@ -293,47 +233,35 @@ trait HasEvents
      */
     protected function callUploaded($field, $file, $response)
     {
-        return $this->fire(Events\Uploaded::class, [$field, $file, $response]);
-    }
-
-    /**
-     * 触发文件删除事件.
-     *
-     * @param UploadFieldInterface|\Dcat\Admin\Form\Field $field
-     * @param UploadedFile                                $file
-     * @param Response                                    $response
-     *
-     * @return \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\RedirectResponse|void
-     */
-    protected function callFileDeleting($field)
-    {
-        return $this->fire(Events\FileDeleting::class, [$field]);
-    }
-
-    /**
-     * 触发文件删除完成事件.
-     *
-     * @param UploadFieldInterface|\Dcat\Admin\Form\Field $field
-     * @param UploadedFile                                $file
-     * @param Response                                    $response
-     *
-     * @return \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\RedirectResponse|void
-     */
-    protected function callFileDeleted($field)
-    {
-        return $this->fire(Events\FileDeleted::class, [$field]);
+        return $this->callListeners('uploaded', [$field, $file, $response]);
     }
 
     /**
      * @param string $name
-     * @param array  $payload
      *
      * @return RedirectResponse|\Illuminate\Http\Response|void
      */
-    protected function fire($name, array $payload = [])
+    protected function callListeners($name, array $params = [])
     {
-        Event::dispatch(new $name($this, $payload));
+        $response = null;
 
-        return $this->eventResponse;
+        foreach ($this->__hooks[$name] as $func) {
+            $this->model && $func->bindTo($this->model);
+
+            $ret = $func($this, ...$params);
+
+            if (
+                $response
+                || ! $ret
+                || ! $ret instanceof Response
+                || ($ret instanceof RedirectResponse && $this->isAjaxRequest())
+            ) {
+                continue;
+            }
+
+            $response = $ret;
+        }
+
+        return $response;
     }
 }

@@ -3,7 +3,6 @@
 namespace Dcat\Admin\Form\Field;
 
 use Dcat\Admin\Admin;
-use Dcat\Admin\Exception\RuntimeException;
 use Dcat\Admin\Form;
 use Illuminate\Support\Arr;
 
@@ -79,7 +78,7 @@ trait CanCascadeFields
     {
         $this->conditions[] = compact('operator', 'value', 'closure');
 
-        ($this->parent ?: $this->form)->cascadeGroup($closure, [
+        $this->form->cascadeGroup($closure, [
             'column' => $this->column(),
             'index'  => count($this->conditions) - 1,
             'class'  => $this->getCascadeClass($value, $operator),
@@ -109,30 +108,15 @@ trait CanCascadeFields
             'has' => '8',
         ];
 
-        return sprintf('cascade-%s-%s-%s', str_replace(' ', '-', $this->getElementClassString()), $value, $map[$operator]);
-    }
-
-    protected function addCascadeScript()
-    {
-        if (! $script = $this->getCascadeScript()) {
-            return;
-        }
-
-        Admin::script(
-            <<<JS
-Dcat.init('{$this->getElementClassSelector()}', function (\$this) {
-    {$script}
-});
-JS
-        );
+        return sprintf('cascade-%s-%s-%s', $this->getElementClassString(), $value, $map[$operator]);
     }
 
     /**
      * Add cascade scripts to contents.
      *
-     * @return string
+     * @return void
      */
-    protected function getCascadeScript()
+    protected function addCascadeScript()
     {
         if (empty($this->conditions)) {
             return;
@@ -146,7 +130,7 @@ JS
             ];
         })->toJson();
 
-        return <<<JS
+        $script = <<<JS
 (function () {
     var compare = function (a, b, o) {
         if (! $.isArray(b)) {
@@ -197,7 +181,7 @@ JS
     };
     var cascade_groups = {$cascadeGroups}, event = '{$this->cascadeEvent}';
 
-    \$this.on(event, function (e) {
+    $('{$this->getElementClassSelector()}').on(event, function (e) {
         {$this->getFormFrontValue()}
 
         cascade_groups.forEach(function (event) {
@@ -211,6 +195,8 @@ JS
     }).trigger(event);
 })();
 JS;
+
+        Admin::script($script);
     }
 
     /**
@@ -233,7 +219,7 @@ var checked = $('{$this->getElementClassSelector()}:checked').map(function(){
 }).get();
 JS;
             default:
-                throw new RuntimeException('Invalid form field type');
+                throw new \InvalidArgumentException('Invalid form field type');
         }
     }
 }

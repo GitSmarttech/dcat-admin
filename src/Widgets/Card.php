@@ -69,7 +69,7 @@ class Card extends Widget
             $content->simple();
         }
 
-        $this->content = $this->formatRenderable($content);
+        $this->content = $this->lazyRenderable($content);
 
         return $this;
     }
@@ -113,7 +113,7 @@ class Card extends Widget
     /**
      * {@inheritdoc}
      */
-    public function defaultVariables()
+    public function variables()
     {
         return [
             'title'      => $this->title,

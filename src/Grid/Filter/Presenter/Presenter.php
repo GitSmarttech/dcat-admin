@@ -4,12 +4,9 @@ namespace Dcat\Admin\Grid\Filter\Presenter;
 
 use Dcat\Admin\Admin;
 use Dcat\Admin\Grid\Filter\AbstractFilter;
-use Dcat\Admin\Traits\HasVariables;
 
 abstract class Presenter
 {
-    use HasVariables;
-
     /**
      * @var array
      */
@@ -112,9 +109,19 @@ abstract class Presenter
     }
 
     /**
+     * Blade template variables for this presenter.
+     *
+     * @return array
+     */
+    public function variables(): array
+    {
+        return [];
+    }
+
+    /**
      * Collect assets.
      */
-    public static function requireAssets()
+    public static function collectAssets()
     {
         if (static::$js) {
             Admin::js(static::$js);

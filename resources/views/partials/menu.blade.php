@@ -1,45 +1,43 @@
 @php
-    $depth = $item['depth'] ?? 0;
+    $active = $builder->isActive($item);
 
-    $horizontal = config('admin.layout.horizontal_menu');
-
-    $defaultIcon = config('admin.menu.default_icon', 'feather icon-circle');
+    $layer = $item['layer'] ?? 0;
 @endphp
 
 @if($builder->visible($item))
-    @if(empty($item['children']))
+    @if(isset($item['is_header']))
+        <li class="nav-header">
+            {{ $builder->translate($item['title']) }}
+        </li>
+    @elseif(! isset($item['children']))
         <li class="nav-item">
-            <a @if(mb_strpos($item['uri'], '://') !== false) target="_blank" @endif
-               href="{{ $builder->getUrl($item['uri']) }}"
-               class="nav-link {!! $builder->isActive($item) ? 'active' : '' !!}">
-                {!! str_repeat('&nbsp;', $depth) !!}<i class="fa fa-fw {{ $item['icon'] ?: $defaultIcon }}"></i>
+            <a @if(mb_strpos($item['uri'], '://') !== false) target="_blank" @endif href="{{ $builder->getUrl($item['uri']) }}" class="nav-link {!! $builder->isActive($item) ? 'active' : '' !!}">
+                {!! str_repeat('&nbsp;', $layer) !!}<i class="fa {{ $item['icon'] ?: 'feather icon-circle' }}"></i>
                 <p>
                     {{ $builder->translate($item['title']) }}
                 </p>
             </a>
         </li>
     @else
+        @php
+            $active = $builder->isActive($item);
+        @endphp
 
-        <li class="{{ $horizontal ? 'dropdown' : 'has-treeview' }} {{ $depth > 0 ? 'dropdown-submenu' : '' }} nav-item {{ $builder->isActive($item) ? 'menu-open' : '' }}">
-            <a href="#"
-               class="nav-link {{ $builder->isActive($item) ? ($horizontal ? 'active' : '') : '' }}
-                    {{ $horizontal ? 'dropdown-toggle' : '' }}">
-                {!! str_repeat('&nbsp;', $depth) !!}<i class="fa fa-fw {{ $item['icon'] ?: $defaultIcon }}"></i>
+        <li class="nav-item has-treeview {{ $active ? 'menu-open' : '' }}">
+            <a href="#" class="nav-link">
+                {!! str_repeat('&nbsp;', $layer) !!}<i class="fa {{ $item['icon'] ?: 'feather icon-circle' }}"></i>
                 <p>
                     {{ $builder->translate($item['title']) }}
-
-                    @if(! $horizontal)
-                        <i class="right fa fa-angle-left"></i>
-                    @endif
+                    <i class="right fa fa-angle-left"></i>
                 </p>
             </a>
-            <ul class="nav {{ $horizontal ? 'dropdown-menu' : 'nav-treeview' }}">
+            <ul class="nav nav-treeview">
                 @foreach($item['children'] as $item)
                     @php
-                        $item['depth'] = $depth + 1;
+                        $item['layer'] = $layer + 1;
                     @endphp
 
-                    @include('admin::partials.menu', ['item' => $item])
+                    @include('admin::partials.menu', $item)
                 @endforeach
             </ul>
         </li>

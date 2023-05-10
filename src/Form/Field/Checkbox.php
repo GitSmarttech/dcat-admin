@@ -2,21 +2,22 @@
 
 namespace Dcat\Admin\Form\Field;
 
+use Dcat\Admin\Admin;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Widgets\Checkbox as WidgetCheckbox;
 
 class Checkbox extends MultipleSelect
 {
     use CanCascadeFields;
-    use CanLoadFields;
+
+    public static $css = [];
+    public static $js = [];
 
     protected $style = 'primary';
 
     protected $cascadeEvent = 'change';
 
     protected $canCheckAll = false;
-
-    protected $inline = true;
 
     /**
      * @param array|\Closure|string $options
@@ -62,13 +63,6 @@ class Checkbox extends MultipleSelect
         return $this;
     }
 
-    public function inline(bool $inline)
-    {
-        $this->inline = $inline;
-
-        return $this;
-    }
-
     /**
      * {@inheritdoc}
      */
@@ -93,14 +87,16 @@ class Checkbox extends MultipleSelect
         }
 
         $checkbox
-            ->inline($this->inline)
-            ->check($this->value())
+            ->inline()
+            ->check(old($this->column, $this->value()))
             ->class($this->getElementClassString());
 
         $this->addVariables([
             'checkbox' => $checkbox,
             'checkAll' => $this->makeCheckAllCheckbox(),
         ]);
+
+        $this->script = ';';
 
         return parent::render();
     }
@@ -111,8 +107,19 @@ class Checkbox extends MultipleSelect
             return;
         }
 
-        $this->addVariables(['canCheckAll' => $this->canCheckAll]);
+        $this->addCheckAllScript();
 
         return WidgetCheckbox::make('_check_all_', [__('admin.all')]);
+    }
+
+    protected function addCheckAllScript()
+    {
+        Admin::script(
+            <<<'JS'
+$('[name="_check_all_"]').on('change', function () {
+    $(this).parents('.form-field').find('input[type="checkbox"]').prop('checked', this.checked);
+});
+JS
+        );
     }
 }

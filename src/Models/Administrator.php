@@ -33,18 +33,13 @@ class Administrator extends Model implements AuthenticatableContract
      */
     public function __construct(array $attributes = [])
     {
-        $this->init();
-
-        parent::__construct($attributes);
-    }
-
-    protected function init()
-    {
         $connection = config('admin.database.connection') ?: config('database.default');
 
         $this->setConnection($connection);
 
         $this->setTable(config('admin.database.users_table'));
+
+        parent::__construct($attributes);
     }
 
     /**
@@ -78,18 +73,6 @@ class Administrator extends Model implements AuthenticatableContract
 
         $relatedModel = config('admin.database.roles_model');
 
-        return $this->belongsToMany($relatedModel, $pivotTable, 'user_id', 'role_id')->withTimestamps();
-    }
-
-    /**
-     * 判断是否允许查看菜单.
-     *
-     * @param array|Menu $menu
-     *
-     * @return bool
-     */
-    public function canSeeMenu($menu)
-    {
-        return true;
+        return $this->belongsToMany($relatedModel, $pivotTable, 'user_id', 'role_id');
     }
 }

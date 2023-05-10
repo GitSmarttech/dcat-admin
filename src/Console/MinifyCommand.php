@@ -31,10 +31,11 @@ class MinifyCommand extends Command
     /**
      * @var array
      */
-    protected $colors = [
+    protected $themes = [
         self::DEFAULT => '',
-        'blue'        => '#6d8be6',
-        'blue-light'  => '#62a8ea',
+        'blue'        => '#5686d4',
+        'blue-light'  => '#4199de',
+        'blue-dark'   => '#586cb1',
         'green'       => '#4e9876',
     ];
 
@@ -60,7 +61,7 @@ class MinifyCommand extends Command
 
         if ($name === static::ALL) {
             // 编译所有内置主题色
-            return $this->compileAllColors();
+            return $this->compileAllDefaultThemes();
         }
 
         $publish = $this->option('publish');
@@ -77,21 +78,25 @@ class MinifyCommand extends Command
             // 编译
             $this->runProcess("cd {$this->packagePath} && npm run prod", 1800);
 
+            // 重置文件
+            $this->resetFiles();
+
             if ($publish) {
                 $this->publishAssets();
             }
-        } finally {
-            // 重置文件
+        } catch (\Throwable $e) {
             $this->resetFiles();
+
+            throw $e;
         }
     }
 
     /**
      * 编译所有内置主题.
      */
-    protected function compileAllColors()
+    protected function compileAllDefaultThemes()
     {
-        foreach ($this->colors as $name => $_) {
+        foreach ($this->themes as $name => $_) {
             $this->call('admin:minify', ['name' => $name]);
         }
     }
@@ -230,8 +235,8 @@ class MinifyCommand extends Command
 
         $color = $this->option('color');
 
-        if (! $color && isset($this->colors[$name])) {
-            return $this->colors[$name];
+        if (! $color && isset($this->themes[$name])) {
+            return $this->themes[$name];
         }
 
         if (! $color) {

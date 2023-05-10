@@ -43,15 +43,6 @@ class Modal extends Widget
     protected $size = '';
 
     /**
-     * @var string
-     */
-    protected $centered = '';
-
-    /**
-     * @var string
-     */
-    protected $scrollable = '';
-    /**
      * @var array
      */
     protected $events = [];
@@ -74,39 +65,11 @@ class Modal extends Widget
      */
     public function __construct($title = null, $content = null)
     {
-        $this->id('modal-'.Str::random(10));
+        $this->id('modal-'.Str::random(8));
         $this->title($title);
         $this->content($content);
 
         $this->class('modal fade');
-    }
-
-    /**
-     * 设置弹窗垂直居中.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function centered(bool $value = true)
-    {
-        $this->centered = $value ? 'modal-dialog-centered' : '';
-
-        return $this;
-    }
-
-    /**
-     * 设置弹窗内容滚动.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function scrollable(bool $value = true)
-    {
-        $this->scrollable = $value ? 'modal-dialog-scrollable' : '';
-
-        return $this;
     }
 
     /**
@@ -211,7 +174,7 @@ class Modal extends Widget
                 ->simple()
                 ->load(false);
 
-            $this->onShow("target.find('{$table->getElementSelector()}').trigger('table:load')");
+            $this->onShow($table->getLoadScript());
         }
 
         if ($content instanceof LazyRenderable) {
@@ -324,7 +287,7 @@ class Modal extends Widget
         return $this->on('hidden.bs.modal', $script);
     }
 
-    protected function addScript()
+    protected function addEventScript()
     {
         if (! $this->events) {
             return;
@@ -340,7 +303,7 @@ class Modal extends Widget
 
         $this->script = <<<JS
 (function () {
-    var target = $('#{$this->id()}'), body = target.find('.modal-body');
+    var target = $('{$this->getElementSelector()}'), body = target.find('.modal-body');
     {$this->getRenderableScript()}
     {$script}
 })();
@@ -369,7 +332,7 @@ JS
     public function render()
     {
         $this->addLoadRenderableScript();
-        $this->addScript();
+        $this->addEventScript();
 
         if ($this->join) {
             return $this->renderButton().parent::render();
@@ -384,7 +347,7 @@ JS
     {
         return <<<HTML
 <div {$this->formatHtmlAttributes()} role="dialog">
-    <div class="modal-dialog {$this->centered} {$this->scrollable} modal-{$this->size}">
+    <div class="modal-dialog modal-{$this->size}">
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title">{$this->renderTitle()}</h4>

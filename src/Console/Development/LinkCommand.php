@@ -13,7 +13,7 @@ class LinkCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'admin:dev';
+    protected $signature = 'admin:dev:link';
 
     /**
      * Execute the console command.

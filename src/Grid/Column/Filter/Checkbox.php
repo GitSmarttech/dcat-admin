@@ -39,7 +39,7 @@ JS;
 
         $allCheck = (count($value) == count($this->options)) ? 'checked' : '';
         $active = empty($value) ? '' : 'active';
-        $pjaxContainer = Admin::getPjaxContainerId();
+        $pjaxContainer = Admin::$pjaxContainerId;
 
         return <<<HTML
 &nbsp;<span class="dropdown">

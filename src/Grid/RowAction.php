@@ -17,6 +17,11 @@ abstract class RowAction extends GridAction
     protected $column;
 
     /**
+     * @var string
+     */
+    public $selectorPrefix = '.grid-row-action-';
+
+    /**
      * Get primary key value of current row.
      *
      * @return mixed
@@ -24,7 +29,7 @@ abstract class RowAction extends GridAction
     public function getKey()
     {
         if ($this->row) {
-            return $this->row->{$this->parent->getKeyName()};
+            return $this->row->get($this->parent->getKeyName());
         }
 
         return parent::getKey();
@@ -49,7 +54,7 @@ abstract class RowAction extends GridAction
     /**
      * Set row model.
      *
-     * @param Fluent|\Illuminate\Database\Eloquent\Model $row
+     * @param Fluent $row
      *
      * @return $this
      */
@@ -75,5 +80,24 @@ abstract class RowAction extends GridAction
         $this->column = $column;
 
         return $this;
+    }
+
+    /**
+     * @param string $prefix
+     * @param string $class
+     *
+     * @return string
+     */
+    public function makeSelector($prefix, $class = null)
+    {
+        $class = $class ?: static::class;
+
+        $key = $prefix.'-'.$class.'-'.$this->getKey();
+
+        if (! isset(static::$selectors[$key])) {
+            static::$selectors[$key] = uniqid($prefix);
+        }
+
+        return static::$selectors[$key];
     }
 }

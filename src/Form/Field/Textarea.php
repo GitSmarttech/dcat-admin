@@ -36,8 +36,6 @@ class Textarea extends Field
             $this->value = json_encode($this->value, JSON_PRETTY_PRINT);
         }
 
-        $this->addVariables(['rows' => $this->rows]);
-
-        return parent::render();
+        return parent::render()->with(['rows' => $this->rows]);
     }
 }

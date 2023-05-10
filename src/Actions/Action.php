@@ -6,7 +6,6 @@ use Dcat\Admin\Admin;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Traits\HasHtmlAttributes;
 use Illuminate\Contracts\Support\Renderable;
-use Illuminate\Support\Str;
 
 /**
  * Class Action.
@@ -15,8 +14,12 @@ use Illuminate\Support\Str;
  */
 abstract class Action implements Renderable
 {
-    use HasHtmlAttributes;
-    use HasActionHandler;
+    use HasHtmlAttributes, HasActionHandler;
+
+    /**
+     * @var array
+     */
+    protected static $selectors = [];
 
     /**
      * @var array|string
@@ -36,6 +39,11 @@ abstract class Action implements Renderable
     /**
      * @var string
      */
+    public $selectorPrefix = '.admin-action-';
+
+    /**
+     * @var string
+     */
     protected $method = 'POST';
 
     /**
@@ -51,7 +59,7 @@ abstract class Action implements Renderable
     /**
      * @var bool
      */
-    protected $allowHandler = true;
+    protected $usingHandler = true;
 
     /**
      * @var array
@@ -107,13 +115,11 @@ abstract class Action implements Renderable
      *
      * @param mixed $key
      *
-     * @return $this
+     * @return void
      */
     public function setKey($key)
     {
         $this->primaryKey = $key;
-
-        return $this;
     }
 
     /**
@@ -139,19 +145,28 @@ abstract class Action implements Renderable
      */
     public function selector()
     {
-        return $this->selector ?: ($this->selector = $this->makeSelector());
+        if (is_null($this->selector)) {
+            return $this->makeSelector($this->selectorPrefix);
+        }
+
+        return $this->selector;
     }
 
     /**
-     * 生成选择器.
-     *
      * @param string $prefix
+     * @param string $class
      *
      * @return string
      */
-    public function makeSelector()
+    public function makeSelector($prefix, $class = null)
     {
-        return '.act-'.Str::random();
+        $class = $prefix.'-'.($class ?: static::class);
+
+        if (! isset(static::$selectors[$class])) {
+            static::$selectors[$class] = uniqid($prefix);
+        }
+
+        return static::$selectors[$class];
     }
 
     /**
@@ -190,10 +205,10 @@ HTML;
     /**
      * @return void
      */
-    protected function prepareHandler()
+    protected function setupHandler()
     {
         if (
-            ! $this->allowHandler
+            ! $this->usingHandler
             || ! method_exists($this, 'handle')
         ) {
             return;
@@ -211,9 +226,9 @@ HTML;
             return '';
         }
 
-        $this->prepareHandler();
+        $this->setupHandler();
 
-        $this->setUpHtmlAttributes();
+        $this->setupHtmlAttributes();
 
         if ($script = $this->script()) {
             Admin::script($script);
@@ -233,7 +248,7 @@ HTML;
     /**
      * @return void
      */
-    protected function setUpHtmlAttributes()
+    protected function setupHtmlAttributes()
     {
         $this->addHtmlClass($this->getElementClass());
 
@@ -242,7 +257,7 @@ HTML;
         ];
 
         if (method_exists($this, 'href') && ($href = $this->href())) {
-            $this->allowHandler = false;
+            $this->usingHandler = false;
 
             $attributes['href'] = $href;
         }

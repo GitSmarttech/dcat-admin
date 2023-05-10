@@ -56,42 +56,45 @@ use Illuminate\Support\Traits\Macroable;
  * @method string border(int $amt = 0)
  * @method string inputBorder(int $amt = 0)
  * @method string background(int $amt = 0)
- * @method string darkModeBg(int $amt = 0)
- * @method string darkModeFont(int $amt = 0)
- * @method string darkModeColor(int $amt = 0)
- * @method string darkModeColor2(int $amt = 0)
  */
 class Color
 {
     use Macroable;
 
-    const DEFAULT_COLOR = 'default';
+    const DEFAULT_COLOR = 'indigo';
 
     /**
      * 颜色.
      *
      * @var array
      */
-    protected static $extensions = [
-        'default' => [
+    protected static $colors = [
+        'indigo' => [
+            'colors' => [
+                'primary'        => 'indigo',
+                'primary-darker' => 'indigo-darker',
+                'link'           => 'indigo-darker',
+            ],
+        ],
+        'blue-light' => [
+            'colors' => [
+                'primary'        => '#4199de',
+                'primary-darker' => '#278bd9',
+                'link'           => '#278bd9',
+            ],
+        ],
+        'blue-dark' => [
             'colors' => [
                 'primary'        => '#586cb1',
                 'primary-darker' => '#4c60a3',
                 'link'           => '#4c60a3',
             ],
         ],
-        'blue-light' => [
-            'colors' => [
-                'primary'        => '#62a8ea',
-                'primary-darker' => '#62a8ea',
-                'link'           => '#62a8ea',
-            ],
-        ],
         'blue' => [
             'colors' => [
-                'primary'        => '#6d8be6',
-                'primary-darker' => '#6d8be6',
-                'link'           => '#6d8be6',
+                'primary'        => '#5686d4',
+                'primary-darker' => '#4277cf',
+                'link'           => '#4277cf',
             ],
         ],
         'green' => [
@@ -108,7 +111,7 @@ class Color
      *
      * @var array
      */
-    protected static $allColors = [
+    protected static $default = [
         'info'    => 'blue',
         'success' => 'green',
         'danger'  => 'red',
@@ -177,14 +180,6 @@ class Color
 
         // 背景色
         'background' => '#eff3f8',
-
-        // 深色模式
-        // 背景色
-        'dark-mode-bg' => '#2c2c43',
-        // 深色
-        'dark-mode-color' => '#222233',
-        'dark-mode-color2' => '#1e1e2d',
-        'dark-mode-font' => '##a8a9bb',
     ];
 
     /**
@@ -197,7 +192,7 @@ class Color
     /**
      * @var array
      */
-    protected $colors = [];
+    protected $currentColors = [];
 
     /**
      * @var array
@@ -205,50 +200,45 @@ class Color
     protected $realColors;
 
     /**
-     * 获取主题色名称.
+     * Color constructor.
      *
-     * @return string
+     * @param string $name
      */
-    public function getName()
+    public function __construct($name = null)
     {
-        if (! $this->name) {
-            $this->name = config('admin.layout.color') ?: static::DEFAULT_COLOR;
-        }
+        $this->name = ($name ?: config('admin.layout.color')) ?: static::DEFAULT_COLOR;
 
-        return $this->name;
+        $this->currentColors = array_merge(
+            static::$default,
+            static::$colors[$this->name]['colors'] ?? []
+        );
     }
 
     /**
-     * 设置主题色名称.
-     *
-     * @param string $name
-     *
-     * @return void
+     * @return string
      */
-    public function setName(string $name)
+    public function name()
     {
-        $this->name = $name;
+        return $this->name;
     }
 
     /**
      * 获取颜色.
      *
-     * @param string $colorName
+     * @param array  $colorName
      * @param string $default
      *
      * @return string
      */
-    public function get(?string $colorName, ?string $default = null)
+    public function get(string $colorName, string $default = null)
     {
         if ($this->realColors) {
             return $this->realColors[$colorName] ?? $default;
         }
 
-        $colors = $this->getColors();
+        $result = $this->currentColors[$colorName] ?? $default;
 
-        $result = $colors[$colorName] ?? $default;
-
-        if ($result && ! empty($colors[$result])) {
+        if ($result && ! empty($this->currentColors[$result])) {
             return $this->get($result, $default);
         }
 
@@ -263,13 +253,11 @@ class Color
     public function all()
     {
         if ($this->realColors === null) {
-            $colors = $this->getColors();
-
-            foreach ($colors as $key => &$color) {
+            foreach ($this->currentColors as $key => &$color) {
                 $color = $this->get($key);
             }
 
-            $this->realColors = &$colors;
+            $this->realColors = &$this->currentColors;
         }
 
         return $this->realColors;
@@ -283,7 +271,7 @@ class Color
      *
      * @return string
      */
-    public function lighten(?string $color, int $amt)
+    public function lighten(string $color, int $amt)
     {
         return Helper::colorLighten($this->get($color, $color), $amt);
     }
@@ -309,24 +297,9 @@ class Color
      *
      * @return string
      */
-    public function alpha(?string $color, $alpha)
+    public function alpha(string $color, $alpha)
     {
         return Helper::colorAlpha($this->get($color, $color), $alpha);
-    }
-
-    /**
-     * @return array
-     */
-    protected function getColors()
-    {
-        if (! $this->colors) {
-            $this->colors = array_merge(
-                static::$allColors,
-                static::$extensions[$this->getName()]['colors'] ?? []
-            );
-        }
-
-        return $this->colors;
     }
 
     /**
@@ -355,7 +328,7 @@ class Color
      */
     public static function extend(string $name, array $colors)
     {
-        static::$extensions[$name] = [
+        static::$colors[$name] = [
             'colors' => $colors,
         ];
     }

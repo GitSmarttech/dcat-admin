@@ -6,9 +6,13 @@ use Dcat\Admin\Form\Field;
 use Dcat\Admin\Support\Helper;
 use Dcat\Admin\Widgets\Checkbox as WidgetCheckbox;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Support\Arr;
 
 class Tree extends Field
 {
+    public static $js = '@jstree';
+    public static $css = '@jstree';
+
     protected $options = [
         'plugins' => ['checkbox', 'types'],
         'core'    => [
@@ -21,7 +25,6 @@ class Tree extends Field
         ],
         'checkbox' => [
             'keep_selected_style' => false,
-            'three_state' => true,
         ],
         'types' => [
             'default'  => [
@@ -30,23 +33,39 @@ class Tree extends Field
         ],
     ];
 
+    /**
+     * @var array
+     */
     protected $nodes = [];
 
+    /**
+     * @var array
+     */
     protected $parents = [];
 
+    /**
+     * @var bool
+     */
     protected $expand = true;
 
+    /**
+     * @var array
+     */
     protected $columnNames = [
         'id'     => 'id',
         'text'   => 'name',
         'parent' => 'parent_id',
     ];
 
-    protected $exceptParents = true;
+    /**
+     * @var bool
+     */
+    protected $filterParents = true;
 
+    /**
+     * @var bool
+     */
     protected $readOnly = false;
-
-    protected $rootParentId = 0;
 
     /**
      * @param array|Arrayable|\Closure $data exp:
@@ -71,44 +90,21 @@ class Tree extends Field
     }
 
     /**
-     * 设置父级复选框是否禁止被单独选中.
-     *
-     * @param bool $value
-     *
      * @return $this
      */
-    public function treeState(bool $value = true)
+    public function disableFilterParents()
     {
-        $this->options['checkbox']['three_state'] = $value;
-
-        return $this->exceptParentNode($value);
-    }
-
-    /**
-     * 过滤父节点.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function exceptParentNode(bool $value = true)
-    {
-        $this->exceptParents = $value;
-
-        return $this;
-    }
-
-    public function rootParentId($id)
-    {
-        $this->rootParentId = $id;
+        $this->filterParents = false;
 
         return $this;
     }
 
     /**
-     * {@inheritDoc}
+     * Set the field as readonly mode.
+     *
+     * @return $this
      */
-    public function readOnly(bool $value = true)
+    public function readOnly()
     {
         $this->readOnly = true;
 
@@ -138,12 +134,14 @@ class Tree extends Field
 
     protected function formatNodes()
     {
-        $value = Helper::array($this->value());
+        $value = Helper::array(
+            old($this->column, $this->value())
+        );
 
         $this->value = &$value;
 
         if ($this->nodes instanceof \Closure) {
-            $this->nodes = Helper::array($this->nodes->call($this->values(), $value, $this));
+            $this->nodes = $this->nodes->call($this->values(), $this->value(), $this);
         }
 
         if (! $this->nodes) {
@@ -162,7 +160,7 @@ class Tree extends Field
             }
 
             $parentId = $v[$parentColumn] ?? '#';
-            if (empty($parentId) || $parentId == $this->rootParentId) {
+            if (empty($parentId)) {
                 $parentId = '#';
             } else {
                 $parentIds[] = $parentId;
@@ -186,7 +184,7 @@ class Tree extends Field
             ];
         }
 
-        if ($this->exceptParents) {
+        if ($this->filterParents) {
             // 筛选出所有父节点，最终点击树节点时过滤掉父节点
             $this->parents = array_unique($parentIds);
         }
@@ -236,9 +234,18 @@ class Tree extends Field
 
     protected function formatFieldData($data)
     {
-        return Helper::array($this->getValueFromData($data), true);
+        $value = Arr::get($data, $this->column);
+
+        return Helper::array($value, true);
     }
 
+    /**
+     * Prepare for saving.
+     *
+     * @param string|array $value
+     *
+     * @return array
+     */
     protected function prepareInputValue($value)
     {
         return Helper::array($value, true);
@@ -246,6 +253,8 @@ class Tree extends Field
 
     public function render()
     {
+        $this->attribute('type', 'hidden');
+
         $checkboxes = new WidgetCheckbox();
 
         $checkboxes->style('primary');
@@ -254,8 +263,9 @@ class Tree extends Field
             1 => trans('admin.selectall'),
             2 => trans('admin.expand'),
         ]);
-
-        $this->readOnly && $checkboxes->disable(1);
+        if ($this->readOnly) {
+            $checkboxes->disable(1);
+        }
 
         $this->expand && $checkboxes->check(2);
 
@@ -267,12 +277,13 @@ class Tree extends Field
 
         $this->addVariables([
             'checkboxes' => $checkboxes,
-            'nodes'      => $this->nodes,
+            'options'    => json_encode($this->options),
+            'nodes'      => json_encode($this->nodes),
             'expand'     => $this->expand,
             'disabled'   => empty($this->attributes['disabled']) ? '' : 'disabled',
-            'parents'    => $this->parents,
+            'parents'    => json_encode($this->parents),
         ]);
 
-        return parent::render();
+        return parent::render(); // TODO: Change the autogenerated stub
     }
 }

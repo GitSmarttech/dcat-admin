@@ -3,8 +3,8 @@
 namespace Dcat\Admin\Grid;
 
 use Dcat\Admin\Admin;
-use Dcat\Admin\Exception\AdminException;
 use Dcat\Admin\Grid;
+use Dcat\Admin\Middleware\Pjax;
 use Dcat\Admin\Repositories\Repository;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -12,7 +12,6 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -102,9 +101,11 @@ class Model
     protected $sortName = '_sort';
 
     /**
-     * @var bool
+     * Collection callback.
+     *
+     * @var callable[]
      */
-    protected $simple = false;
+    protected $collectionCallback = [];
 
     /**
      * @var Grid
@@ -179,7 +180,7 @@ class Model
     /**
      * @return AbstractPaginator|LengthAwarePaginator
      */
-    public function paginator(): ?AbstractPaginator
+    public function paginator(): AbstractPaginator
     {
         $this->buildData();
 
@@ -187,45 +188,19 @@ class Model
     }
 
     /**
-     * 是否使用 simplePaginate方法进行分页.
-     *
-     * @param bool $value
-     *
-     * @return $this
-     */
-    public function simple(bool $value = true)
-    {
-        $this->simple = $value;
-
-        return $this;
-    }
-
-    /**
-     * @return string
-     */
-    public function getPaginateMethod()
-    {
-        return $this->simple ? 'simplePaginate' : 'paginate';
-    }
-
-    /**
      * @param int              $total
      * @param Collection|array $data
      *
-     * @return LengthAwarePaginator|Paginator
+     * @return LengthAwarePaginator
      */
     public function makePaginator($total, $data, string $url = null)
     {
-        if ($this->simple) {
-            $paginator = new Paginator($data, $this->getPerPage(), $this->getCurrentPage());
-        } else {
-            $paginator = new LengthAwarePaginator(
-                $data,
-                $total,
-                $this->getPerPage(), // 传入每页显示行数
-                $this->getCurrentPage() // 传入当前页码
-            );
-        }
+        $paginator = new LengthAwarePaginator(
+            $data,
+            $total,
+            $this->getPerPage(), // 传入每页显示行数
+            $this->getCurrentPage() // 传入当前页码
+        );
 
         return $paginator->setPath(
             $url ?: url()->current()
@@ -235,7 +210,7 @@ class Model
     /**
      * Get primary key name of model.
      *
-     * @return string|array
+     * @return string
      */
     public function getKeyName()
     {
@@ -246,14 +221,10 @@ class Model
      * Enable or disable pagination.
      *
      * @param bool $use
-     *
-     * @reutrn $this;
      */
     public function usePaginate($use = true)
     {
         $this->usePaginate = $use;
-
-        return $this;
     }
 
     /**
@@ -271,7 +242,21 @@ class Model
      */
     public function getPerPageName()
     {
-        return $this->grid->makeName($this->perPageName);
+        return $this->perPageName;
+    }
+
+    /**
+     * Set the query string variable used to store the per-page.
+     *
+     * @param string $name
+     *
+     * @return $this
+     */
+    public function setPerPageName($name)
+    {
+        $this->perPageName = $name;
+
+        return $this;
     }
 
     /**
@@ -285,23 +270,21 @@ class Model
     }
 
     /**
+     * @param string $pageName
+     */
+    public function setPageName(string $pageName)
+    {
+        $this->pageName = $pageName;
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getPageName()
     {
-        return $this->grid->makeName($this->pageName);
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return $this
-     */
-    public function setPageName($name)
-    {
-        $this->pageName = $name;
-
-        return $this;
+        return $this->pageName;
     }
 
     /**
@@ -311,10 +294,12 @@ class Model
      */
     public function getSortName()
     {
-        return $this->grid->makeName($this->sortName);
+        return $this->sortName;
     }
 
     /**
+     * Set the query string variable used to store the sort.
+     *
      * @param string $name
      *
      * @return $this
@@ -383,17 +368,43 @@ class Model
     }
 
     /**
+     * Set collection callback.
+     *
+     * @param callable $callback
+     *
+     * @return $this
+     */
+    public function collection(callable $callback = null)
+    {
+        $this->collectionCallback[] = $callback;
+
+        return $this;
+    }
+
+    /**
      * Build.
      *
-     * @return Collection
+     * @param bool $toArray
+     *
+     * @return array|Collection|mixed
      */
-    public function buildData()
+    public function buildData(bool $toArray = false)
     {
         if (is_null($this->data)) {
             $this->setData($this->fetch());
+
+            if ($this->collectionCallback) {
+                $data = $this->data;
+
+                foreach ($this->collectionCallback as $cb) {
+                    $data = call_user_func($cb, $data);
+                }
+
+                $this->setData($data);
+            }
         }
 
-        return $this->data;
+        return $toArray ? $this->data->toArray() : $this->data;
     }
 
     /**
@@ -413,9 +424,10 @@ class Model
             $this->setPaginator($data);
 
             $data = $data->getCollection();
-        } elseif ($data instanceof Collection) {
-        } elseif ($data instanceof Arrayable || is_array($data)) {
+        } elseif (is_array($data)) {
             $data = collect($data);
+        } elseif ($data instanceof Arrayable) {
+            $data = collect($data->toArray());
         }
 
         if ($data instanceof Collection) {
@@ -472,7 +484,7 @@ class Model
             return $results->getCollection();
         }
 
-        throw new AdminException('Grid query error');
+        throw new \Exception('Grid query error');
     }
 
     /**
@@ -484,7 +496,7 @@ class Model
     {
         $this->paginator = $paginator;
 
-        $paginator->setPageName($this->getPageName());
+        $paginator->setPageName($this->pageName);
     }
 
     /**
@@ -504,6 +516,28 @@ class Model
     }
 
     /**
+     * If current page is greater than last page, then redirect to last page.
+     *
+     * @param LengthAwarePaginator $paginator
+     *
+     * @return void
+     */
+    protected function handleInvalidPage(LengthAwarePaginator $paginator)
+    {
+        if (
+            $this->usePaginate
+            && $paginator->lastPage()
+            && $paginator->currentPage() > $paginator->lastPage()
+        ) {
+            $lastPageUrl = $this->request->fullUrlWithQuery([
+                $paginator->getPageName() => $paginator->lastPage(),
+            ]);
+
+            Pjax::respond(redirect($lastPageUrl));
+        }
+    }
+
+    /**
      * Get current page.
      *
      * @return int|null
@@ -514,7 +548,7 @@ class Model
             return;
         }
 
-        return $this->currentPage ?: ($this->currentPage = ($this->request->get($this->getPageName()) ?: 1));
+        return $this->currentPage ?: ($this->currentPage = ($this->request->get($this->pageName) ?: 1));
     }
 
     /**
@@ -538,7 +572,7 @@ class Model
             return;
         }
 
-        return $this->request->get($this->getPerPageName()) ?: $this->perPage;
+        return $this->request->get($this->perPageName) ?: $this->perPage;
     }
 
     /**
@@ -546,11 +580,13 @@ class Model
      *
      * @param $method
      *
-     * @return Collection
+     * @return static
      */
     public function findQueryByMethod($method)
     {
-        return $this->queries->where('method', $method);
+        return $this->queries->first(function ($query) use ($method) {
+            return $query['method'] == $method;
+        });
     }
 
     /**
@@ -590,10 +626,10 @@ class Model
         }
 
         if (empty($this->sort['column']) || empty($this->sort['type'])) {
-            return [null, null, null];
+            return [null, null];
         }
 
-        return [$this->sort['column'], $this->sort['type'], $this->sort['cast'] ?? null];
+        return [$this->sort['column'], $this->sort['type']];
     }
 
     /**

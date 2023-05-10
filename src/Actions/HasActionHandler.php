@@ -16,10 +16,6 @@ trait HasActionHandler
      */
     protected $response;
 
-    private $confirmString;
-
-    private $paramString;
-
     /**
      * @return Response
      */
@@ -70,29 +66,7 @@ trait HasActionHandler
      */
     public function handlerRoute()
     {
-        return route(admin_api_route_name('action'));
-    }
-
-    /**
-     * @return string
-     */
-    protected function normalizeConfirmData()
-    {
-        if ($this->confirmString !== null) {
-            return $this->confirmString;
-        }
-
-        $confirm = $this->confirm();
-
-        return $this->confirmString = ($confirm ? admin_javascript_json((array) $confirm) : 'false');
-    }
-
-    /**
-     * @return string
-     */
-    protected function normalizeParameters()
-    {
-        return $this->paramString ?: ($this->paramString = json_encode($this->parameters()));
+        return route(admin_api_route('action'));
     }
 
     /**
@@ -100,6 +74,10 @@ trait HasActionHandler
      */
     protected function addHandlerScript()
     {
+        $data = json_encode($this->parameters());
+        $confirm = $this->confirm();
+        $confirm = $confirm ? json_encode((array) $confirm) : 'false';
+
         $script = <<<JS
 Dcat.Action({
     selector: '{$this->selector()}',
@@ -107,8 +85,8 @@ Dcat.Action({
     method: '{$this->method()}',
     key: '{$this->getKey()}',
     url: '{$this->handlerRoute()}',
-    data: {$this->normalizeParameters()},
-    confirm: {$this->normalizeConfirmData()},
+    data: {$data},
+    confirm: {$confirm},
     calledClass: '{$this->makeCalledClass()}',
     before: {$this->actionScript()},
     html: {$this->handleHtmlResponse()},

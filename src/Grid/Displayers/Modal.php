@@ -10,23 +10,9 @@ class Modal extends AbstractDisplayer
 {
     protected $title;
 
-    protected $xl = false;
-
-    protected $icon = 'fa-clone';
-
     public function title(string $title)
     {
         $this->title = $title;
-    }
-
-    public function xl()
-    {
-        $this->xl = true;
-    }
-
-    public function icon($icon)
-    {
-        $this->icon = $icon;
     }
 
     protected function setUpLazyRenderable(LazyRenderable $renderable)
@@ -62,9 +48,7 @@ class Modal extends AbstractDisplayer
         $title = $this->title ?: $title;
 
         return WidgetModal::make()
-            ->when(true, function ($modal) {
-                $this->xl ? $modal->xl() : $modal->lg();
-            })
+            ->lg()
             ->title($title)
             ->body($html)
             ->delay(300)
@@ -73,8 +57,6 @@ class Modal extends AbstractDisplayer
 
     protected function renderButton()
     {
-        $icon = $this->icon ? "<i class='fa {$this->icon}'></i>" : '';
-
-        return "<a href='javascript:void(0)'>{$icon}&nbsp;&nbsp;{$this->value}</a>";
+        return "<a href=\"javascript:void(0)\"><i class=\"fa fa-clone\"></i>&nbsp;&nbsp;{$this->value}</a>";
     }
 }

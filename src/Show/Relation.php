@@ -4,8 +4,6 @@ namespace Dcat\Admin\Show;
 
 use Dcat\Admin\Grid;
 use Dcat\Admin\Show;
-use Dcat\Admin\Support\Helper;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Fluent;
 
 class Relation extends Field
@@ -39,11 +37,6 @@ class Relation extends Field
     protected $model;
 
     /**
-     * @var int
-     */
-    public $width = 12;
-
-    /**
      * Relation constructor.
      *
      * @param string   $name
@@ -60,11 +53,11 @@ class Relation extends Field
     /**
      * Set parent model for relation.
      *
-     * @param Fluent|Model $model
+     * @param Fluent $model
      *
      * @return $this|Fluent
      */
-    public function model($model = null)
+    public function model(Fluent $model = null)
     {
         if ($model === null) {
             return $this->model;
@@ -76,18 +69,11 @@ class Relation extends Field
     }
 
     /**
-     * @param int $width
+     * Render this relation panel.
      *
-     * @return $this
+     * @return string
      */
-    public function width(int $width, int $_ = 2)
-    {
-        $this->width = $width;
-
-        return $this;
-    }
-
-    protected function build()
+    public function render()
     {
         $view = call_user_func($this->builder, $this->model);
 
@@ -97,25 +83,18 @@ class Relation extends Field
             return $view->render();
         }
 
-        if ($view instanceof Grid) {
-            return $view->setName($this->name)
-                ->title($this->title)
-                ->disableBatchDelete()
-                ->render();
+        if (! $view instanceof Grid) {
+            return $view;
         }
 
-        return Helper::render($view);
-    }
+        $view->setName($this->name)
+            ->title($this->title)
+            ->disableBatchDelete();
 
-    /**
-     * Render this relation panel.
-     *
-     * @return string
-     */
-    public function render()
-    {
         return <<<HTML
-<div class="mt-1-5">{$this->build()}</div>
+<div class="mb-2">
+    {$view->render()}
+</div>
 HTML;
     }
 }

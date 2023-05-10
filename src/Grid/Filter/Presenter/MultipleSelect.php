@@ -18,11 +18,11 @@ class MultipleSelect extends Select
      */
     public function loadMore($target, $resourceUrl, $idField = 'id', $textField = 'text'): self
     {
-        $class = $this->filter->formatColumnClass($target);
+        $column = $this->filter->column();
 
         $script = <<<JS
-$(document).on('change', ".{$this->getElementClass()}", function () {
-    var target = $(this).closest('form').find(".{$class}");
+$(document).on('change', ".{$this->getClass($column)}", function () {
+    var target = $(this).closest('form').find(".{$this->getClass($target)}");
     var ids = $(this).find("option:selected").map(function(index,elem) {
             return $(elem).val();
         }).get().join(',');

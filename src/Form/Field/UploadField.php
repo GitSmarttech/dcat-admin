@@ -2,7 +2,6 @@
 
 namespace Dcat\Admin\Form\Field;
 
-use Dcat\Admin\Exception\UploadException;
 use Dcat\Admin\Traits\HasUploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
@@ -130,10 +129,10 @@ trait UploadField
         }
 
         if ($this->name instanceof \Closure) {
-            $this->name = $this->name->call($this->values(), $file);
+            return $this->name->call($this, $file);
         }
 
-        if ($this->name !== '' && is_string($this->name)) {
+        if (is_string($this->name)) {
             return $this->name;
         }
 
@@ -148,7 +147,7 @@ trait UploadField
     public function getDirectory()
     {
         if ($this->directory instanceof \Closure) {
-            $this->directory = $this->directory->call($this->values(), $this->form);
+            return call_user_func($this->directory, $this->form);
         }
 
         return $this->directory ?: $this->defaultDirectory();
@@ -189,10 +188,10 @@ trait UploadField
         $id = $request->get('_id');
 
         if (! $id) {
-            return $this->responseErrorMessage('Missing id');
+            return $this->responseErrorMessage(403, 'Missing id');
         }
 
-        if ($errors = $this->getValidationErrors($file)) {
+        if ($errors = $this->getErrorMessages($file)) {
             return $this->responseValidationMessage($errors);
         }
 
@@ -217,7 +216,7 @@ trait UploadField
         }
 
         // 上传失败
-        throw new UploadException(trans('admin.uploader.upload_failed'));
+        return $this->responseErrorMessage(trans('admin.uploader.upload_failed'));
     }
 
     /**
@@ -230,8 +229,8 @@ trait UploadField
     /**
      * Specify the directory and name for upload file.
      *
-     * @param string|\Closure $directory
-     * @param null|string     $name
+     * @param string      $directory
+     * @param null|string $name
      *
      * @return $this
      */
@@ -247,7 +246,7 @@ trait UploadField
     /**
      * Specify the directory upload file.
      *
-     * @param string|\Closure $dir
+     * @param string $dir
      *
      * @return $this
      */
@@ -339,14 +338,9 @@ trait UploadField
      *
      * @return bool|\Illuminate\Support\MessageBag
      */
-    protected function getValidationErrors(UploadedFile $file)
+    protected function getErrorMessages(UploadedFile $file)
     {
         $rules = $attributes = [];
-
-        // 如果文件上传有错误，则直接返回错误信息
-        if ($file->getError() !== UPLOAD_ERR_OK) {
-            return $file->getErrorMessage();
-        }
 
         if (! $fieldRules = $this->getRules()) {
             return false;
@@ -361,7 +355,7 @@ trait UploadField
         if (! $validator->passes()) {
             $errors = $validator->errors()->getMessages()[$this->column];
 
-            return implode('<br> ', $errors);
+            return implode('; ', $errors);
         }
     }
 

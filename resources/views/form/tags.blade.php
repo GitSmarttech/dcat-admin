@@ -1,6 +1,6 @@
-<div class="{{$viewClass['form-group']}}">
+<div class="{{$viewClass['form-group']}} {!! !$errors->has($errorKey) ? '' : 'has-error' !!}">
 
-    <label class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
+    <label for="{{$id}}" class="{{$viewClass['label']}} control-label">{!! $label !!}</label>
 
     <div class="{{$viewClass['field']}}">
 
@@ -17,55 +17,3 @@
 
     </div>
 </div>
-
-<script init="{!! $selector !!}" require="@select2?lang={{ config('app.locale') === 'en' ? '' : str_replace('_', '-', config('app.locale')) }}">
-    var options = {
-        tags: true,
-        createTag: function(params) {
-            if (/[,;，； ]/.test(params.term)) {
-                var str = params.term.trim().replace(/[,;，；]*$/, '');
-                return { id: str, text: str }
-            } else {
-                return null;
-            }
-        }
-    };
-
-    @if(isset($ajax))
-    options = $.extend(options, {
-        ajax: {
-            url: "{!! $ajax['url'] !!}",
-            dataType: 'json',
-            delay: 250,
-            cache: true,
-            data: function (params) {
-                return {
-                    q: params.term,
-                    page: params.page
-                };
-            },
-            processResults: function (data, params) {
-                params.page = params.page || 1;
-
-                return {
-                    results: $.map(data.data, function (d) {
-                        d.id = d.{{ $ajax['idField'] }};
-                        d.text = d.{{ $ajax['textField'] }};
-                        return d;
-                    }),
-                    pagination: {
-                        more: data.next_page_url
-                    }
-                };
-            },
-        },
-        escapeMarkup: function (markup) {
-            return markup;
-        },
-    });
-    @endif
-
-    $this.select2(options);
-</script>
-
-

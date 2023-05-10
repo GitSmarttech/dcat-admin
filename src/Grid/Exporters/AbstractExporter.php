@@ -3,7 +3,6 @@
 namespace Dcat\Admin\Grid\Exporters;
 
 use Dcat\Admin\Grid;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
@@ -55,9 +54,7 @@ abstract class AbstractExporter implements ExporterInterface
      */
     public function __construct($titles = [])
     {
-        if ($titles) {
-            $this->titles($titles);
-        }
+        $this->titles($titles);
     }
 
     /**
@@ -65,38 +62,15 @@ abstract class AbstractExporter implements ExporterInterface
      *
      * @param array|false $titles
      *
-     * @return $this|array
+     * @return $this
      */
-    public function titles($titles = null)
+    public function titles($titles)
     {
-        if ($titles === null) {
-            return $this->titles ?: ($this->titles = $this->defaultTitles());
-        }
-
         if (is_array($titles) || $titles === false) {
             $this->titles = $titles;
         }
 
         return $this;
-    }
-
-    /**
-     * 读取默认标题.
-     *
-     * @return array
-     */
-    protected function defaultTitles()
-    {
-        return $this
-            ->grid
-            ->columns()
-            ->mapWithKeys(function (Grid\Column $column, $name) {
-                return [$name => $column->getLabel()];
-            })
-            ->reject(function ($v, $k) {
-                return in_array($k, ['#', Grid\Column::ACTION_COLUMN_NAME, Grid\Column::SELECT_COLUMN_NAME]);
-            })
-            ->toArray();
     }
 
     /**
@@ -212,33 +186,11 @@ abstract class AbstractExporter implements ExporterInterface
             $model->forPage($page, $perPage);
         }
 
-        $array = $this->grid->processFilter()->toArray();
+        $array = $this->grid->processFilter(true);
 
         $model->reset();
 
-        return $this->normalize($this->callBuilder($array));
-    }
-
-    /**
-     * 格式化待导出数据.
-     *
-     * @param array $data
-     *
-     * @return array
-     */
-    protected function normalize(array $data)
-    {
-        foreach ($data as &$row) {
-            $row = Arr::dot($row);
-
-            foreach ($row as &$v) {
-                if (is_array($v) || is_object($v)) {
-                    $v = json_encode($v, JSON_UNESCAPED_UNICODE);
-                }
-            }
-        }
-
-        return $data;
+        return $this->callBuilder($array);
     }
 
     /**

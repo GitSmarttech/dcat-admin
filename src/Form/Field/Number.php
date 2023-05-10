@@ -2,15 +2,45 @@
 
 namespace Dcat\Admin\Form\Field;
 
+use Dcat\Admin\Admin;
+
 class Number extends Text
 {
     protected $view = 'admin::form.number';
 
-    protected $options = [
-        'upClass'   => 'primary shadow-0',
-        'downClass' => 'light shadow-0',
-        'center'    => true,
+    protected static $js = [
+        '@number-input',
     ];
+
+    public function render()
+    {
+        $this->addScript();
+        $this->addStyle();
+
+        $this->defaultAttribute('style', 'width: 140px;flex:none');
+
+        $this->prepend('');
+
+        return parent::render();
+    }
+
+    protected function addScript()
+    {
+        $this->script = <<<JS
+$('{$this->getElementClassSelector()}:not(.initialized)')
+    .addClass('initialized')
+    .bootstrapNumber({
+        upClass: 'primary',
+        downClass: 'white',
+        center: true
+    });
+JS;
+    }
+
+    protected function addStyle()
+    {
+        Admin::style('.number-group .input-group{flex-wrap: nowrap}');
+    }
 
     /**
      * Set min value of number field.
@@ -41,7 +71,9 @@ class Number extends Text
     }
 
     /**
-     * {@inheritDoc}
+     * @param mixed $value
+     *
+     * @return int
      */
     protected function prepareInputValue($value)
     {
@@ -49,7 +81,11 @@ class Number extends Text
     }
 
     /**
-     * {@inheritDoc}
+     * Set or get value of the field.
+     *
+     * @param null $value
+     *
+     * @return mixed
      */
     public function value($value = null)
     {
@@ -58,14 +94,5 @@ class Number extends Text
         }
 
         return parent::value($value);
-    }
-
-    public function render()
-    {
-        $this->defaultAttribute('style', 'width: 140px;flex:none');
-
-        $this->prepend('');
-
-        return parent::render();
     }
 }

@@ -21,15 +21,13 @@ class SelectTable extends Presenter
 
     protected $style = 'primary';
 
+    protected $title;
+
     protected $id;
 
     protected $options;
 
     protected $placeholder;
-
-    protected $visibleColumn;
-
-    protected $key;
 
     public function __construct(LazyRenderable $table)
     {
@@ -62,29 +60,13 @@ class SelectTable extends Presenter
      */
     public function model(string $model, string $id = 'id', string $text = 'title')
     {
-        return $this->pluck($text, $id)->options(function ($v) use ($model, $id, $text) {
+        return $this->options(function ($v) use ($model, $id, $text) {
             if (! $v) {
                 return [];
             }
 
             return $model::find($v)->pluck($text, $id);
         });
-    }
-
-    /**
-     * 设置选中的key以及标题字段.
-     *
-     * @param $visibleColumn
-     * @param $key
-     *
-     * @return $this
-     */
-    public function pluck(?string $visibleColumn, ?string $key = 'id')
-    {
-        $this->visibleColumn = $visibleColumn;
-        $this->key = $key;
-
-        return $this;
     }
 
     /**
@@ -114,7 +96,7 @@ class SelectTable extends Presenter
      */
     public function title($title)
     {
-        $this->dialog->title($title);
+        $this->title = $title;
 
         return $this;
     }
@@ -138,16 +120,10 @@ class SelectTable extends Presenter
     protected function setUpTable()
     {
         $this->dialog
+            ->id('dialog-'.$this->id)
+            ->runScript(false)
             ->footer($this->renderFooter())
             ->button($this->renderButton());
-
-        // 设置选中的字段和待显示的标题字段
-        $this->dialog
-            ->getTable()
-            ->getRenderable()
-            ->payload([
-                LazyRenderable::ROW_SELECTOR_COLUMN_NAME => [$this->key, $this->visibleColumn],
-            ]);
     }
 
     protected function formatOptions()
@@ -168,25 +144,21 @@ class SelectTable extends Presenter
             }
         }
 
-        $this->options = $values;
+        $this->options = json_encode($values);
     }
 
     protected function addScript()
     {
-        $options = json_encode($this->options);
-
         Admin::script(
             <<<JS
-Dcat.init('#{$this->id}', function (self) {
-    var dialogId = self.parent().find('{$this->dialog->getElementSelector()}').attr('id');
-    
-    Dcat.grid.SelectTable({
-        dialog: '[data-id="' + dialogId + '"]',
-        container: '#{$this->id}',
-        input: '#hidden-{$this->id}',
-        values: {$options},
-    });
-})
+{$this->dialog->getScript()}
+
+Dcat.grid.SelectTable({
+    dialog: '#{$this->dialog->id()}',
+    container: '#{$this->id}',
+    input: '#hidden-{$this->id}',
+    values: {$this->options},
+});
 JS
         );
     }
@@ -194,7 +166,7 @@ JS
     /**
      * @return array
      */
-    public function defaultVariables(): array
+    public function variables(): array
     {
         $this->formatOptions();
         $this->setUpTable();

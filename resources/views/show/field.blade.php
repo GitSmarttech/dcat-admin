@@ -1,9 +1,9 @@
 <div class="show-field form-group row">
-    <div class="col-sm-{{ $width['label'] }} control-label">
+    <div class="col-sm-2 control-label">
         <span>{{ $label }}</span>
     </div>
 
-    <div class="col-sm-{{ $width['field'] }}">
+    <div class="col-sm-{{ $width }}">
         @if($wrapped)
             <div class="box box-solid box-default no-margin box-show">
                 <div class="box-body">

@@ -20,7 +20,7 @@ interface Repository
     /**
      * 获取主键名称.
      *
-     * @return string|array
+     * @return string
      */
     public function getKeyName();
 
@@ -59,25 +59,25 @@ interface Repository
      *
      * @param Form $form
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function edit(Form $form);
+    public function edit(Form $form): array;
 
     /**
      * 获取详情页面数据.
      *
      * @param Show $show
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function detail(Show $show);
+    public function detail(Show $show): array;
 
     /**
      * 新增记录.
      *
      * @param Form $form
      *
-     * @return int|bool|\Dcat\Admin\Http\JsonResponse
+     * @return mixed
      */
     public function store(Form $form);
 
@@ -86,16 +86,16 @@ interface Repository
      *
      * @param Form $form
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function updating(Form $form);
+    public function getDataWhenUpdating(Form $form): array;
 
     /**
      * 更新数据.
      *
      * @param Form $form
      *
-     * @return bool|\Dcat\Admin\Http\JsonResponse
+     * @return bool
      */
     public function update(Form $form);
 
@@ -105,16 +105,16 @@ interface Repository
      * @param Form  $form
      * @param array $deletingData
      *
-     * @return mixed|\Dcat\Admin\Http\JsonResponse
+     * @return mixed
      */
-    public function delete(Form $form, array $deletingData);
+    public function destroy(Form $form, array $deletingData);
 
     /**
      * 查询删除前的行数据.
      *
      * @param Form $form
      *
-     * @return array|\Illuminate\Contracts\Support\Arrayable
+     * @return array
      */
-    public function deleting(Form $form);
+    public function getDataWhenDeleting(Form $form): array;
 }

@@ -1,4 +1,4 @@
-<div class="dcat-box custom-data-table">
+<div class="dcat-box custom-data-table dt-bootstrap4">
     @include('admin::grid.table-toolbar')
 
     {!! $grid->renderFilter() !!}
@@ -8,9 +8,9 @@
     <div class="table-responsive table-wrapper {{ $grid->option('table_collapse') ? 'table-collapse' : '' }}">
         <div class="tables-container">
             <div class="table-wrap table-main" data-height="{{ $tableHeight }}">
-                <table class="custom-data-table {{ $grid->formatTableClass() }}" id="{{ $tableId }}">
+                <table class="custom-data-table dataTable {{ $grid->formatTableClass() }}" id="{{ $tableId }}">
                     <thead>
-                    @if ($headers = $grid->getVisibleComplexHeaders())
+                    @if ($headers = $grid->getComplexHeaders())
                         <tr>
                             @foreach($headers as $header)
                                 {!! $header->render() !!}
@@ -18,7 +18,7 @@
                         </tr>
                     @endif
                     <tr>
-                        @foreach($grid->getVisibleColumns() as $column)
+                        @foreach($grid->columns() as $column)
                             <th {!! $column->formatTitleAttributes() !!}>{!! $column->getLabel() !!}{!! $column->renderHeader() !!}</th>
                         @endforeach
                     </tr>
@@ -31,7 +31,7 @@
                     <tbody>
                     @foreach($grid->rows() as $row)
                         <tr {!! $row->rowAttributes() !!}>
-                            @foreach($grid->getVisibleColumnNames() as $name)
+                            @foreach($grid->getColumnNames() as $name)
                                 <td {!! $row->columnAttributes($name) !!}>
                                     {!! $row->column($name) !!}
                                 </td>
@@ -40,7 +40,7 @@
                     @endforeach
                     @if ($grid->rows()->isEmpty())
                         <tr>
-                            <td colspan="{!! count($grid->getVisibleColumnNames()) !!}">
+                            <td colspan="{!! count($grid->getColumnNames()) !!}">
                                 <div style="margin:5px 0 0 10px;"><span class="help-block" style="margin-bottom:0"><i class="feather icon-alert-circle"></i>&nbsp;{{ trans('admin.no_data') }}</span></div>
                             </td>
                         </tr>
@@ -51,10 +51,10 @@
 
             @if ($grid->leftVisibleColumns()->isNotEmpty() || $grid->leftVisibleComplexColumns()->isNotEmpty())
                 <div class="table-wrap table-fixed table-fixed-left" data-height="{{ $tableHeight }}">
-                    <table class="custom-data-table {{ $grid->formatTableClass() }} ">
+                    <table class="custom-data-table dataTable {{ $grid->formatTableClass() }} ">
                         <thead>
 
-                        @if ($grid->getVisibleComplexHeaders())
+                        @if ($grid->getComplexHeaders())
                             <tr>
                                 @foreach($grid->leftVisibleComplexColumns() as $header)
                                     {!! $header->render() !!}
@@ -95,9 +95,9 @@
 
             @if ($grid->rightVisibleColumns()->isNotEmpty() || $grid->rightVisibleComplexColumns()->isNotEmpty())
                 <div class="table-wrap table-fixed table-fixed-right" data-height="{{ $tableHeight }}">
-                    <table class="custom-data-table {{ $grid->formatTableClass() }} ">
+                    <table class="custom-data-table dataTable {{ $grid->formatTableClass() }} ">
                         <thead>
-                        @if ($grid->getVisibleComplexHeaders())
+                        @if ($grid->getComplexHeaders())
                             <tr>
                                 @foreach($grid->rightVisibleComplexColumns() as $header)
                                     {!! $header->render() !!}
@@ -142,5 +142,5 @@
 
     {!! $grid->renderFooter() !!}
 
-    {!! $grid->renderPagination() !!}
+    @include('admin::grid.table-pagination')
 </div>

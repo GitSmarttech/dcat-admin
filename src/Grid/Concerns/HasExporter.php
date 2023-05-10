@@ -48,7 +48,7 @@ trait HasExporter
             $exporter->resolve($exporterDriver);
         }
 
-        return $titles ? $exporter->titles($titles) : $exporter;
+        return $exporter->titles($titles);
     }
 
     /**
@@ -64,7 +64,7 @@ trait HasExporter
             $this->exported
             || (
                 (! $this->allowExporter()
-                    || ! $scope = request($this->exporter()->getQueryName()))
+                    || ! $scope = request($this->exporter()->queryName()))
                 && ! $forceExport
             )
         ) {
@@ -74,8 +74,6 @@ trait HasExporter
         $this->exported = true;
 
         $this->callBuilder();
-
-        $this->fire(new Grid\Events\Exporting([$scope]));
 
         // clear output buffer.
         if (ob_get_length()) {
@@ -93,6 +91,20 @@ trait HasExporter
     public function exporter()
     {
         return $this->exporter ?: ($this->exporter = new Exporter($this));
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return void
+     */
+    protected function setExporterQueryName(string $name = null)
+    {
+        if (! $this->exporter) {
+            return;
+        }
+
+        $this->exporter->setQueryName(($name ?: $this->getName()).'_export_');
     }
 
     /**

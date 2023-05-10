@@ -1,14 +1,14 @@
 {
-    "name": "kinvcode/laravel-admin",
+    "name": "gitsmarttech/laravel-admin",
     "description": "dcat admin",
     "type": "library",
     "keywords": ["dcat", "laravel", "admin", "grid", "form", "laravel admin"],
-    "homepage": "https://github.com/kinvcode/laravel-admin",
+    "homepage": "https://github.com/gitsmarttech/laravel-admin",
     "license": "MIT",
     "authors": [
         {
-            "name": "kinvcode",
-            "email": "kinvcode@gmail.com"
+            "name": "gitsmarttech",
+            "email": "yang.fan@showrenmai.com"
         }
     ],
     "require": {

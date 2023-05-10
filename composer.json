@@ -3,7 +3,7 @@
     "description": "dcat admin",
     "type": "library",
     "keywords": ["dcat", "laravel", "admin", "grid", "form", "laravel admin"],
-    "homepage": "https://github.com/gitsmarttech/laravel-admin",
+    "homepage": "https://github.com/GitSmarttech/laravel-admin",
     "license": "MIT",
     "authors": [
         {
